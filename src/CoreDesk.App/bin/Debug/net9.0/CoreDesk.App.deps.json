@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v9.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v9.0": {
+      "CoreDesk.App/1.0.0": {
+        "runtime": {
+          "CoreDesk.App.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "CoreDesk.App/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
