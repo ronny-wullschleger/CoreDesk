@@ -8,11 +8,13 @@ namespace CoreDesk.App.Services;
 public class AutomationService
 {
     private readonly MockErpService _erpService;
+    private readonly TeamService _teamService;
     private readonly List<AutomationRule> _rules;
 
-    public AutomationService(MockErpService erpService)
+    public AutomationService(MockErpService erpService, TeamService teamService)
     {
         _erpService = erpService;
+        _teamService = teamService;
         _rules = InitializeRules();
     }
 
@@ -100,6 +102,32 @@ public class AutomationService
                 // Log error but don't fail the ticket creation
                 Console.WriteLine($"Automation rule '{rule.Name}' failed: {ex.Message}");
             }
+        }
+
+        // Auto-assign agent based on team and workload
+        try
+        {
+            var suggestedAgent = _teamService.SuggestAgentForTicket(ticket);
+            if (!string.IsNullOrEmpty(suggestedAgent))
+            {
+                ticket.AssignedToAgent = suggestedAgent;
+                
+                // Log the agent assignment
+                var agentAssignmentUpdate = new TicketUpdate
+                {
+                    Author = "Automation",
+                    Content = $"Automatisch an Agent '{suggestedAgent}' zugewiesen",
+                    Timestamp = DateTime.Now,
+                    IsInternalNote = true,
+                    Type = TicketUpdateType.AgentAssignment
+                };
+                ticket.Updates.Add(agentAssignmentUpdate);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail the ticket creation
+            Console.WriteLine($"Agent assignment failed: {ex.Message}");
         }
 
         // Set last updated

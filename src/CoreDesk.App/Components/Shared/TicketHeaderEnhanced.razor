@@ -42,37 +42,38 @@
 </div>
 
 <!-- ERP Integration Panel -->
-@if (CustomerData != null || OrderData != null)
+@if (CustomerData != null)
 {
     <div class="p-3 bg-white border-bottom">
         <div class="row">
-            @if (CustomerData != null)
-            {
-                <div class="col-md-6">
-                    <h6 class="text-primary mb-2">
-                        <i class="bi bi-person-circle"></i> Kundendaten
-                    </h6>
-                    <div class="small">
-                        <p class="mb-1"><strong>Name:</strong> @CustomerData.Name</p>
-                        <p class="mb-1"><strong>Typ:</strong> @CustomerData.Type</p>
-                        <p class="mb-1"><strong>Kunde seit:</strong> @CustomerData.CreatedAt.ToString("d")</p>
-                        <p class="mb-1"><strong>Status:</strong> @CustomerData.Status</p>
-                        <p class="mb-0"><strong>Bestellungen:</strong> @CustomerOrders.Count</p>
-                    </div>
+            <div class="col-md-6">
+                <h6 class="text-primary mb-2">
+                    <i class="bi bi-person-circle"></i> Kundendaten
+                </h6>
+                <div class="small">
+                    <p class="mb-1"><strong>Name:</strong> @CustomerData.Name</p>
+                    <p class="mb-1"><strong>Typ:</strong> @CustomerData.Type</p>
+                    <p class="mb-1"><strong>Kunde seit:</strong> @CustomerData.CreatedAt.ToString("d")</p>
+                    <p class="mb-1"><strong>Status:</strong> @CustomerData.Status</p>
+                    <p class="mb-0"><strong>Bestellungen:</strong> @CustomerOrders.Count</p>
                 </div>
-            }
-            @if (OrderData != null)
+            </div>
+            
+            @if (SelectedOrder != null)
             {
                 <div class="col-md-6">
                     <h6 class="text-success mb-2">
                         <i class="bi bi-box-seam"></i> Bestelldetails
                     </h6>
                     <div class="small">
-                        <p class="mb-1"><strong>Bestell-Nr:</strong> @OrderData.OrderId</p>
-                        <p class="mb-1"><strong>Datum:</strong> @OrderData.OrderDate.ToString("d")</p>
-                        <p class="mb-1"><strong>Status:</strong> @OrderData.Status</p>
-                        <p class="mb-1"><strong>Summe:</strong> @OrderData.Total.ToString("C")</p>
-                        <p class="mb-0"><strong>Lieferadresse:</strong> @OrderData.ShippingAddress</p>
+                        <p class="mb-1"><strong>Bestell-Nr:</strong> @SelectedOrder.OrderId</p>
+                        <p class="mb-1"><strong>Datum:</strong> @SelectedOrder.OrderDate.ToString("d")</p>
+                        <p class="mb-1"><strong>Status:</strong> @SelectedOrder.Status</p>
+                        <p class="mb-1"><strong>Summe:</strong> @SelectedOrder.Total.ToString("C")</p>
+                        <p class="mb-0"><strong>Lieferadresse:</strong> @SelectedOrder.ShippingAddress</p>
+                        <button @onclick="ClearSelectedOrder" class="btn btn-sm btn-outline-secondary mt-2">
+                            Details ausblenden
+                        </button>
                     </div>
                 </div>
             }
@@ -82,28 +83,36 @@
         {
             <div class="mt-3">
                 <h6 class="text-info mb-2">
-                    <i class="bi bi-clock-history"></i> Bestellhistorie (letzte 5)
+                    <i class="bi bi-clock-history"></i> Bestellhistorie
                 </h6>
                 <div class="table-responsive">
-                    <table class="table table-sm">
+                    <table class="table table-sm table-hover">
                         <thead>
                             <tr>
                                 <th>Bestell-Nr</th>
                                 <th>Datum</th>
                                 <th>Status</th>
                                 <th>Summe</th>
+                                <th>Aktion</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var order in CustomerOrders.Take(5))
+                            @foreach (var order in CustomerOrders)
                             {
-                                <tr>
-                                    <td>@order.OrderId</td>
-                                    <td>@order.OrderDate.ToString("d")</td>
-                                    <td>
+                                <tr class="@(SelectedOrder?.OrderId == order.OrderId ? "table-active" : "")"
+                                    style="cursor: pointer;">
+                                    <td @onclick="() => SelectOrder(order)">@order.OrderId</td>
+                                    <td @onclick="() => SelectOrder(order)">@order.OrderDate.ToString("d")</td>
+                                    <td @onclick="() => SelectOrder(order)">
                                         <span class="badge @GetOrderStatusBadgeClass(order.Status)">@order.Status</span>
                                     </td>
-                                    <td>@order.Total.ToString("C")</td>
+                                    <td @onclick="() => SelectOrder(order)">@order.Total.ToString("C")</td>
+                                    <td>
+                                        <button @onclick="() => SelectOrder(order)" 
+                                                class="btn btn-sm btn-outline-primary">
+                                            Details
+                                        </button>
+                                    </td>
                                 </tr>
                             }
                         </tbody>
@@ -121,7 +130,7 @@
     [Parameter] public EventCallback<ChangeEventArgs> OnPriorityChange { get; set; }
 
     private Customer? CustomerData { get; set; }
-    private Order? OrderData { get; set; }
+    private Order? SelectedOrder { get; set; }
     private List<Order> CustomerOrders { get; set; } = new();
 
     protected override async Task OnParametersSetAsync()
@@ -129,14 +138,30 @@
         // Load customer data from ERP
         CustomerData = await ErpService.GetCustomerByEmailAsync(Ticket.CustomerEmail);
         
-        // Load order data if order ID is present
-        if (!string.IsNullOrEmpty(Ticket.OrderId))
-        {
-            OrderData = await ErpService.GetOrderByIdAsync(Ticket.OrderId);
-        }
-        
         // Load customer order history
         CustomerOrders = await ErpService.GetCustomerOrdersAsync(Ticket.CustomerEmail);
+        
+        // Auto-select order if ticket has order ID
+        if (!string.IsNullOrEmpty(Ticket.OrderId))
+        {
+            SelectedOrder = CustomerOrders.FirstOrDefault(o => o.OrderId == Ticket.OrderId);
+        }
+        else
+        {
+            SelectedOrder = null;
+        }
+    }
+
+    private void SelectOrder(Order order)
+    {
+        SelectedOrder = order;
+        StateHasChanged();
+    }
+
+    private void ClearSelectedOrder()
+    {
+        SelectedOrder = null;
+        StateHasChanged();
     }
 
     private static string GetStatusBadgeClass(TicketStatus status)

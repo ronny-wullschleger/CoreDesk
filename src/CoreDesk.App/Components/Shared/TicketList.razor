@@ -8,23 +8,17 @@
            style="cursor:pointer">
             <div class="d-flex w-100 justify-content-between align-items-start">
                 <div class="flex-grow-1">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <h6 class="mb-1">@ticket.Subject</h6>
-                        <div class="d-flex flex-column align-items-end">
-                            <span class="badge @GetStatusBadgeClass(ticket.Status) mb-1">@ticket.Status</span>
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="mb-1 text-truncate pe-2">@ticket.Subject</h6>
+                        <div class="d-flex flex-column align-items-end gap-1">
+                            <span class="badge @GetStatusBadgeClass(ticket.Status)">@ticket.Status</span>
                             <span class="badge @GetPriorityBadgeClass(ticket.Priority)">@ticket.Priority</span>
                         </div>
                     </div>
-                    <p class="mb-1 text-muted">@ticket.CustomerEmail</p>
+                    <p class="mb-2 text-muted small">@ticket.CustomerEmail</p>
                     <div class="d-flex justify-content-between align-items-center">
                         <small class="text-muted">@ticket.CreatedAt.ToString("g")</small>
-                        <div class="d-flex align-items-center">
-                            <span class="badge bg-light text-dark me-2">@ticket.AssignedToTeam</span>
-                            @if (!string.IsNullOrEmpty(ticket.OrderId))
-                            {
-                                <span class="badge bg-info text-dark">@ticket.OrderId</span>
-                            }
-                        </div>
+                        <span class="badge bg-light text-dark">@ticket.AssignedToTeam</span>
                     </div>
                 </div>
             </div>

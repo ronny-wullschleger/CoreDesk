@@ -58,3 +58,48 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+/* Custom styles for CoreDesk */
+
+/* Active list item styling - change from blue to a softer green */
+.list-group-item.active {
+    background-color: #198754 !important;
+    border-color: #157347 !important;
+    color: #fff !important;
+}
+
+.list-group-item.active:hover {
+    background-color: #157347 !important;
+    border-color: #146c43 !important;
+}
+
+/* Table row active styling */
+.table-active {
+    background-color: #d1ecf1 !important;
+}
+
+/* Improve ticket list spacing */
+.list-group-item {
+    padding: 0.75rem 1rem;
+}
+
+.list-group-item h6 {
+    font-size: 0.95rem;
+    line-height: 1.3;
+}
+
+.list-group-item .badge {
+    font-size: 0.7rem;
+}
+
+/* Team filter buttons styling */
+.btn-group .btn-check:checked + .btn-outline-success {
+    background-color: #198754;
+    border-color: #198754;
+    color: white;
+}
+
+.btn-group .btn-check:checked + .btn-outline-success:hover {
+    background-color: #157347;
+    border-color: #157347;
+}

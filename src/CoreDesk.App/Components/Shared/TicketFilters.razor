@@ -6,23 +6,23 @@
         <div class="btn-group btn-group-sm" role="group">
             <input type="radio" class="btn-check" name="teamFilter" id="all-teams" value="" 
                    checked="@(string.IsNullOrEmpty(SelectedTeamFilter))" @onchange="OnTeamFilterChange">
-            <label class="btn btn-outline-primary" for="all-teams">Alle</label>
+            <label class="btn btn-outline-success" for="all-teams">Alle</label>
             
             <input type="radio" class="btn-check" name="teamFilter" id="team-1st" value="1st-Level"
                    checked="@(SelectedTeamFilter == "1st-Level")" @onchange="OnTeamFilterChange">
-            <label class="btn btn-outline-primary" for="team-1st">1st-Level</label>
+            <label class="btn btn-outline-success" for="team-1st">1st-Level</label>
             
             <input type="radio" class="btn-check" name="teamFilter" id="team-2nd" value="2nd-Level"
                    checked="@(SelectedTeamFilter == "2nd-Level")" @onchange="OnTeamFilterChange">
-            <label class="btn btn-outline-primary" for="team-2nd">2nd-Level</label>
+            <label class="btn btn-outline-success" for="team-2nd">2nd-Level</label>
             
             <input type="radio" class="btn-check" name="teamFilter" id="team-finance" value="Finanzen"
                    checked="@(SelectedTeamFilter == "Finanzen")" @onchange="OnTeamFilterChange">
-            <label class="btn btn-outline-primary" for="team-finance">Finanzen</label>
+            <label class="btn btn-outline-success" for="team-finance">Finanzen</label>
             
             <input type="radio" class="btn-check" name="teamFilter" id="team-aftersales" value="After-Sales"
                    checked="@(SelectedTeamFilter == "After-Sales")" @onchange="OnTeamFilterChange">
-            <label class="btn btn-outline-primary" for="team-aftersales">After-Sales</label>
+            <label class="btn btn-outline-success" for="team-aftersales">After-Sales</label>
         </div>
     </div>
     
