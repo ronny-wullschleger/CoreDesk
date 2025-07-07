@@ -2,7 +2,6 @@
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using CoreDesk.App.Models
 @using CoreDesk.App.Services
-@using CoreDesk.App.Components
 @inject TicketService TicketRepo
 @inject MockErpService ErpService
 @inject TicketFilterService FilterService
@@ -11,103 +10,30 @@
 
 <div class="container-fluid">
     <div class="row">
-        
-        <div class="col-4 vh-100 overflow-auto border-end">
-            <TicketFilters SearchTerm="@searchTerm"
-                          SearchTermChanged="@OnSearchTermChanged"
-                          SelectedStatusFilter="@selectedStatusFilter"
-                          SelectedStatusFilterChanged="@OnStatusFilterChanged"
-                          SelectedCustomerTypeFilter="@selectedCustomerTypeFilter"
-                          SelectedCustomerTypeFilterChanged="@OnCustomerTypeFilterChanged"
-                          SelectedDateRangeFilter="@selectedDateRangeFilter"
-                          SelectedDateRangeFilterChanged="@OnDateRangeFilterChanged"
-                          FilteredTicketsCount="@filteredTickets.Count"
-                          HasActiveFilters="@HasActiveFilters()"
-                          OnFiltersChanged="@ApplyFilters"
-                          OnClearFilters="@ClearFilters" />
-            
-            <TicketList Tickets="@filteredTickets"
-                       SelectedTicketId="@selectedTicket?.Id"
-                       OnTicketSelected="@SelectTicket" />
-        </div>
+        <TicketSidebar SearchTerm="@searchTerm"
+                      SearchTermChanged="@OnSearchTermChanged"
+                      SelectedStatusFilter="@selectedStatusFilter"
+                      SelectedStatusFilterChanged="@OnStatusFilterChanged"
+                      SelectedCustomerTypeFilter="@selectedCustomerTypeFilter"
+                      SelectedCustomerTypeFilterChanged="@OnCustomerTypeFilterChanged"
+                      SelectedDateRangeFilter="@selectedDateRangeFilter"
+                      SelectedDateRangeFilterChanged="@OnDateRangeFilterChanged"
+                      FilteredTicketsCount="@filteredTickets.Count"
+                      HasActiveFilters="@HasActiveFilters()"
+                      OnFiltersChanged="@ApplyFilters"
+                      OnClearFilters="@ClearFilters"
+                      Tickets="@filteredTickets"
+                      SelectedTicketId="@selectedTicket?.Id"
+                      OnTicketSelected="@SelectTicket" />
 
-        <div class="col-8 vh-100 overflow-auto">
-            @if (selectedTicket is not null)
-            {
-                <div class="p-3 sticky-top bg-light border-bottom">
-                     <div class="d-flex justify-content-between align-items-start">
-                         <div>
-                             <h5>Ticket #@selectedTicket.Id: @selectedTicket.Subject</h5>
-                             <p class="mb-2">
-                                 <strong>Kunde:</strong> @customerInfo.CustomerName (@customerInfo.CustomerType)
-                                 @if(!string.IsNullOrEmpty(selectedTicket.OrderId))
-                                 {
-                                    <span class="ms-3 badge bg-secondary">Bestell-Nr: @selectedTicket.OrderId</span>
-                                 }
-                             </p>
-                         </div>
-                         <div class="d-flex align-items-center">
-                             <span class="me-2"><strong>Status:</strong></span>
-                             <select @onchange="OnStatusChange" class="form-select form-select-sm" style="width: auto;">
-                                 @foreach (var status in Enum.GetValues<TicketStatus>())
-                                 {
-                                     <option value="@((int)status)" selected="@(selectedTicket.Status == status)">@status</option>
-                                 }
-                             </select>
-                         </div>
-                     </div>
-                </div>
-
-                <div class="p-3">
-                    @foreach (var update in selectedTicket.Updates.OrderBy(u => u.Timestamp))
-                    {
-                        <div class="card mb-3 @(update.IsInternalNote ? "bg-light-yellow border-warning" : "")">
-                            <div class="card-header d-flex justify-content-between @(update.IsInternalNote ? "bg-warning-subtle" : "")">
-                                <strong>
-                                    @if (update.IsInternalNote)
-                                    {
-                                        <i class="bi bi-gear-fill me-1"></i>
-                                    }
-                                    @update.Author
-                                </strong>
-                                <small>@update.Timestamp.ToString("g")</small>
-                            </div>
-                            <div class="card-body">
-                                <p class="card-text" style="white-space: pre-wrap;">@update.Content</p>
-                            </div>
-                        </div>
-                    }
-
-                    <div class="card mt-4">
-                        <div class="card-body">
-                            <h5 class="card-title">Antworten</h5>
-                            <textarea @bind="newReplyContent" class="form-control" rows="5" placeholder="Schreiben Sie Ihre Antwort..."></textarea>
-                            <button @onclick="AddReply" class="btn btn-primary mt-3">Antwort Senden</button>
-                        </div>
-                    </div>
-                </div>
-            }
-            else
-            {
-                <div class="d-flex align-items-center justify-content-center h-100">
-                    <p class="text-muted">Wählen Sie ein Ticket aus der Liste aus.</p>
-                </div>
-            }
-        </div>
+        <TicketWorkspace SelectedTicket="@selectedTicket"
+                        CustomerInfo="@customerInfo"
+                        ReplyContent="@newReplyContent"
+                        ReplyContentChanged="@OnReplyContentChanged"
+                        OnStatusChange="@OnStatusChange"
+                        OnAddReply="@AddReply" />
     </div>
 </div>
-
-<style>
-    .bg-light-yellow { 
-        background-color: #fffacd; 
-    }
-    .bg-warning-subtle { 
-        background-color: #fff3cd; 
-    }
-    .border-warning { 
-        border-color: #ffc107 !important; 
-    }
-</style>
 
 @code {
     private List<Ticket> tickets = new();
@@ -155,9 +81,10 @@
 
         await TicketRepo.AddTicketUpdateAsync(selectedTicket.Id, update);
         
-        // Clear the reply content and refresh
+        // Clear the reply content and refresh the ticket
         newReplyContent = "";
         await SelectTicket(selectedTicket.Id);
+        StateHasChanged();
     }
 
     private async Task OnStatusChange(ChangeEventArgs e)
@@ -180,7 +107,14 @@
         }
     }
 
-    // Filter event handlers - Made synchronous to fix input clearing issue
+    private Task OnReplyContentChanged(string value)
+    {
+        newReplyContent = value;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    // Filter event handlers
     private void OnSearchTermChanged(string value)
     {
         searchTerm = value;

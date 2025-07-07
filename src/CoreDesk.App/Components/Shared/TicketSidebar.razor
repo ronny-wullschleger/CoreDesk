@@ -1,0 +1,38 @@
+@using CoreDesk.App.Models
+
+<div class="col-4 vh-100 overflow-auto border-end">
+    <TicketFilters SearchTerm="@SearchTerm"
+                  SearchTermChanged="@SearchTermChanged"
+                  SelectedStatusFilter="@SelectedStatusFilter"
+                  SelectedStatusFilterChanged="@SelectedStatusFilterChanged"
+                  SelectedCustomerTypeFilter="@SelectedCustomerTypeFilter"
+                  SelectedCustomerTypeFilterChanged="@SelectedCustomerTypeFilterChanged"
+                  SelectedDateRangeFilter="@SelectedDateRangeFilter"
+                  SelectedDateRangeFilterChanged="@SelectedDateRangeFilterChanged"
+                  FilteredTicketsCount="@FilteredTicketsCount"
+                  HasActiveFilters="@HasActiveFilters"
+                  OnFiltersChanged="@OnFiltersChanged"
+                  OnClearFilters="@OnClearFilters" />
+    
+    <TicketList Tickets="@Tickets"
+               SelectedTicketId="@SelectedTicketId"
+               OnTicketSelected="@OnTicketSelected" />
+</div>
+
+@code {
+    [Parameter] public string SearchTerm { get; set; } = "";
+    [Parameter] public EventCallback<string> SearchTermChanged { get; set; }
+    [Parameter] public TicketStatus? SelectedStatusFilter { get; set; }
+    [Parameter] public EventCallback<TicketStatus?> SelectedStatusFilterChanged { get; set; }
+    [Parameter] public string SelectedCustomerTypeFilter { get; set; } = "";
+    [Parameter] public EventCallback<string> SelectedCustomerTypeFilterChanged { get; set; }
+    [Parameter] public string SelectedDateRangeFilter { get; set; } = "";
+    [Parameter] public EventCallback<string> SelectedDateRangeFilterChanged { get; set; }
+    [Parameter] public int FilteredTicketsCount { get; set; }
+    [Parameter] public bool HasActiveFilters { get; set; }
+    [Parameter] public EventCallback OnFiltersChanged { get; set; }
+    [Parameter] public EventCallback OnClearFilters { get; set; }
+    [Parameter] public List<Ticket> Tickets { get; set; } = new();
+    [Parameter] public int? SelectedTicketId { get; set; }
+    [Parameter] public EventCallback<int> OnTicketSelected { get; set; }
+}

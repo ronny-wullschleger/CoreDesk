@@ -1,0 +1,62 @@
+<div class="p-3">
+    <div class="card mt-4">
+        <div class="card-body">
+            <h5 class="card-title">Antworten</h5>
+            <textarea @bind="localContent" @bind:event="oninput" 
+                     class="form-control" rows="5" 
+                     placeholder="Schreiben Sie Ihre Antwort..."></textarea>
+            <button @onclick="HandleSubmit" class="btn btn-primary mt-3" disabled="@(IsSubmitting || string.IsNullOrWhiteSpace(localContent))">
+                @if (IsSubmitting)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                }
+                Antwort Senden
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string ReplyContent { get; set; } = "";
+    [Parameter] public EventCallback<string> ReplyContentChanged { get; set; }
+    [Parameter] public EventCallback OnSubmit { get; set; }
+
+    private bool IsSubmitting { get; set; } = false;
+    private string localContent = "";
+
+    protected override void OnParametersSet()
+    {
+        // Only update local content if it's different from what we have
+        if (localContent != ReplyContent)
+        {
+            localContent = ReplyContent;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(localContent) || IsSubmitting)
+            return;
+
+        IsSubmitting = true;
+        StateHasChanged();
+
+        try
+        {
+            // Update parent with current content before submitting
+            await ReplyContentChanged.InvokeAsync(localContent);
+            
+            // Submit the reply
+            await OnSubmit.InvokeAsync();
+            
+            // Clear the form after successful submission
+            localContent = "";
+            await ReplyContentChanged.InvokeAsync("");
+        }
+        finally
+        {
+            IsSubmitting = false;
+            StateHasChanged();
+        }
+    }
+}

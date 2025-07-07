@@ -1,0 +1,31 @@
+@using CoreDesk.App.Models
+
+<div class="col-8 vh-100 overflow-auto">
+    @if (SelectedTicket is not null)
+    {
+        <TicketHeader Ticket="@SelectedTicket" 
+                     CustomerInfo="@CustomerInfo" 
+                     OnStatusChange="@OnStatusChange" />
+
+        <TicketUpdates Updates="@SelectedTicket.Updates" />
+
+        <TicketReplyForm ReplyContent="@ReplyContent"
+                        ReplyContentChanged="@ReplyContentChanged"
+                        OnSubmit="@OnAddReply" />
+    }
+    else
+    {
+        <div class="d-flex align-items-center justify-content-center h-100">
+            <p class="text-muted">Wählen Sie ein Ticket aus der Liste aus.</p>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Ticket? SelectedTicket { get; set; }
+    [Parameter] public (string CustomerName, string CustomerType) CustomerInfo { get; set; }
+    [Parameter] public string ReplyContent { get; set; } = "";
+    [Parameter] public EventCallback<string> ReplyContentChanged { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnStatusChange { get; set; }
+    [Parameter] public EventCallback OnAddReply { get; set; }
+}

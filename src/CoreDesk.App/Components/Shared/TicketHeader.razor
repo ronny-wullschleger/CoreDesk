@@ -1,0 +1,31 @@
+@using CoreDesk.App.Models
+
+<div class="p-3 sticky-top bg-light border-bottom">
+    <div class="d-flex justify-content-between align-items-start">
+        <div>
+            <h5>Ticket #@Ticket.Id: @Ticket.Subject</h5>
+            <p class="mb-2">
+                <strong>Kunde:</strong> @CustomerInfo.CustomerName (@CustomerInfo.CustomerType)
+                @if(!string.IsNullOrEmpty(Ticket.OrderId))
+                {
+                   <span class="ms-3 badge bg-secondary">Bestell-Nr: @Ticket.OrderId</span>
+                }
+            </p>
+        </div>
+        <div class="d-flex align-items-center">
+            <span class="me-2"><strong>Status:</strong></span>
+            <select @onchange="OnStatusChange" class="form-select form-select-sm" style="width: auto;">
+                @foreach (var status in Enum.GetValues<TicketStatus>())
+                {
+                    <option value="@((int)status)" selected="@(Ticket.Status == status)">@status</option>
+                }
+            </select>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Ticket Ticket { get; set; } = null!;
+    [Parameter, EditorRequired] public (string CustomerName, string CustomerType) CustomerInfo { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnStatusChange { get; set; }
+}

@@ -1,0 +1,38 @@
+@using CoreDesk.App.Models
+
+<div class="p-3">
+    @foreach (var update in Updates.OrderBy(u => u.Timestamp))
+    {
+        <div class="card mb-3 @(update.IsInternalNote ? "bg-light-yellow border-warning" : "")">
+            <div class="card-header d-flex justify-content-between @(update.IsInternalNote ? "bg-warning-subtle" : "")">
+                <strong>
+                    @if (update.IsInternalNote)
+                    {
+                        <i class="bi bi-gear-fill me-1"></i>
+                    }
+                    @update.Author
+                </strong>
+                <small>@update.Timestamp.ToString("g")</small>
+            </div>
+            <div class="card-body">
+                <p class="card-text" style="white-space: pre-wrap;">@update.Content</p>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .bg-light-yellow { 
+        background-color: #fffacd; 
+    }
+    .bg-warning-subtle { 
+        background-color: #fff3cd; 
+    }
+    .border-warning { 
+        border-color: #ffc107 !important; 
+    }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public List<TicketUpdate> Updates { get; set; } = new();
+}
