@@ -1,4 +1,5 @@
 @using CoreDesk.App.Models
+@using CoreDesk.App.Services
 
 <div class="p-3 bg-light border-bottom">
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -31,6 +32,14 @@
         <input value="@SearchTerm" @oninput="OnSearchTermChange"
                class="form-control form-control-sm" 
                placeholder="Suche nach Betreff, E-Mail oder Bestell-Nr..." />
+    </div>
+    
+    <!-- My Tickets Filter -->
+    <div class="mb-2">
+        <select @onchange="OnMyTicketsFilterChange" class="form-select form-select-sm">
+            <option value="">Alle Tickets</option>
+            <option value="my" selected="@(ShowMyTicketsOnly)">Nur meine Tickets</option>
+        </select>
     </div>
     
     <!-- Priority Filter -->
@@ -90,6 +99,9 @@
     
     [Parameter] public string SelectedDateRangeFilter { get; set; } = "";
     [Parameter] public EventCallback<string> SelectedDateRangeFilterChanged { get; set; }
+    
+    [Parameter] public bool ShowMyTicketsOnly { get; set; } = false;
+    [Parameter] public EventCallback<bool> ShowMyTicketsOnlyChanged { get; set; }
     
     [Parameter] public int FilteredTicketsCount { get; set; }
     [Parameter] public bool HasActiveFilters { get; set; }
@@ -151,6 +163,13 @@
     {
         SelectedDateRangeFilter = e.Value?.ToString() ?? "";
         await SelectedDateRangeFilterChanged.InvokeAsync(SelectedDateRangeFilter);
+        await OnFiltersChanged.InvokeAsync();
+    }
+
+    private async Task OnMyTicketsFilterChange(ChangeEventArgs e)
+    {
+        ShowMyTicketsOnly = e.Value?.ToString() == "my";
+        await ShowMyTicketsOnlyChanged.InvokeAsync(ShowMyTicketsOnly);
         await OnFiltersChanged.InvokeAsync();
     }
 }

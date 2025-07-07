@@ -1,8 +1,10 @@
 @page "/"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using CoreDesk.App.Services
 @inject TicketService TicketRepo
 @inject MockErpService ErpService
 @inject TicketFilterService FilterService
+@inject AuthenticationService AuthService
 
 <PageTitle>CoreDesk - Erweiterte Ticket-Verwaltung</PageTitle>
 
@@ -20,6 +22,8 @@
                       SelectedCustomerTypeFilterChanged="@OnCustomerTypeFilterChanged"
                       SelectedDateRangeFilter="@selectedDateRangeFilter"
                       SelectedDateRangeFilterChanged="@OnDateRangeFilterChanged"
+                      ShowMyTicketsOnly="@showMyTicketsOnly"
+                      ShowMyTicketsOnlyChanged="@OnShowMyTicketsOnlyChanged"
                       FilteredTicketsCount="@filteredTickets.Count"
                       HasActiveFilters="@HasActiveFilters()"
                       OnFiltersChanged="@ApplyFilters"
@@ -35,22 +39,16 @@
                         OnStatusChange="@OnStatusChange"
                         OnPriorityChange="@OnPriorityChange"
                         OnAddReply="@AddReply"
+                        OnTicketUpdated="@OnTicketUpdated"
                         IsInternalNote="@isInternalNote"
                         IsInternalNoteChanged="@OnIsInternalNoteChanged" />
         
         @if (selectedTicket != null)
         {
             <div class="text-center mt-3 mb-3">
-                <button @onclick="AddTestInternalNote" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-bug"></i> Test: Interne Notiz Hinzufügen
+                <button @onclick="AddTestCustomerMessage" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-chat-left-text"></i> Test: Kundennachricht simulieren
                 </button>
-            </div>
-        }
-                        
-        @if (selectedTicket != null)
-        {
-            <div class="text-center mt-3">
-                <button @onclick="AddTestInternalNote" class="btn btn-sm btn-secondary">Test: Interne Notiz Hinzufügen</button>
             </div>
         }
     </div>
@@ -71,6 +69,7 @@
     private TicketStatus? selectedStatusFilter;
     private string selectedCustomerTypeFilter = "";
     private string selectedDateRangeFilter = "";
+    private bool showMyTicketsOnly = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -204,6 +203,12 @@
         ApplyFiltersSync();
     }
 
+    private void OnShowMyTicketsOnlyChanged(bool value)
+    {
+        showMyTicketsOnly = value;
+        ApplyFiltersSync();
+    }
+
     // Filter methods
     private async Task ApplyFilters()
     {
@@ -213,6 +218,7 @@
 
     private void ApplyFiltersSync()
     {
+        var currentAgentId = AuthService?.GetCurrentAgentId();
         filteredTickets = FilterService.ApplyFilters(
             tickets, 
             searchTerm, 
@@ -220,7 +226,9 @@
             selectedPriorityFilter,
             selectedStatusFilter, 
             selectedCustomerTypeFilter, 
-            selectedDateRangeFilter);
+            selectedDateRangeFilter,
+            showMyTicketsOnly,
+            currentAgentId);
         
         StateHasChanged();
     }
@@ -233,21 +241,57 @@
         selectedStatusFilter = null;
         selectedCustomerTypeFilter = "";
         selectedDateRangeFilter = "";
+        showMyTicketsOnly = false;
         ApplyFiltersSync();
     }
 
     private bool HasActiveFilters()
     {
-        return FilterService.HasActiveFilters(searchTerm, selectedTeamFilter, selectedPriorityFilter, selectedStatusFilter, selectedCustomerTypeFilter, selectedDateRangeFilter);
+        return FilterService.HasActiveFilters(searchTerm, selectedTeamFilter, selectedPriorityFilter, selectedStatusFilter, selectedCustomerTypeFilter, selectedDateRangeFilter, showMyTicketsOnly);
     }
 
-    // Test internal note functionality
-    private async Task AddTestInternalNote()
+    // Test customer message functionality
+    private async Task AddTestCustomerMessage()
     {
         if (selectedTicket != null)
         {
-            await TicketRepo.AddTestInternalNoteAsync(selectedTicket.Id);
+            var customerMessages = new[]
+            {
+                "Vielen Dank für Ihre schnelle Antwort! Ich habe noch eine Frage dazu.",
+                "Ich verstehe das Problem, aber könnten Sie mir bitte mehr Details geben?",
+                "Das hat mir sehr geholfen, aber ich brauche noch Unterstützung bei einem anderen Punkt.",
+                "Ich habe versucht, was Sie vorgeschlagen haben, aber es funktioniert noch nicht.",
+                "Perfekt! Das Problem ist gelöst. Vielen Dank für Ihre Hilfe!",
+                "Ich habe das gleiche Problem wieder. Können Sie mir bitte erneut helfen?"
+            };
+
+            var randomMessage = customerMessages[Random.Shared.Next(customerMessages.Length)];
+            
+            var customerUpdate = new TicketUpdate
+            {
+                Author = selectedTicket.CustomerEmail,
+                Content = randomMessage,
+                Timestamp = DateTime.Now,
+                IsInternalNote = false,
+                Type = TicketUpdateType.Reply
+            };
+
+            await TicketRepo.AddTicketUpdateAsync(selectedTicket.Id, customerUpdate);
             await SelectTicket(selectedTicket.Id);
+        }
+    }
+
+    // Handle ticket updates from child components
+    private async Task OnTicketUpdated()
+    {
+        if (selectedTicket != null)
+        {
+            // Refresh the current ticket
+            await SelectTicket(selectedTicket.Id);
+            
+            // Update the tickets list to reflect changes
+            tickets = await TicketRepo.GetAllTicketsAsync();
+            await ApplyFilters();
         }
     }
 }

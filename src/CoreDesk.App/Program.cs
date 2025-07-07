@@ -12,6 +12,7 @@ builder.Services.AddRazorComponents()
 // Order matters for dependency injection
 builder.Services.AddSingleton<MockErpService>();
 builder.Services.AddSingleton<TeamService>();
+builder.Services.AddSingleton<AuthenticationService>();
 builder.Services.AddSingleton<AutomationService>();
 builder.Services.AddSingleton<TicketService>();
 builder.Services.AddSingleton<TicketFilterService>();

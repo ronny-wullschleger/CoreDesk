@@ -13,6 +13,8 @@
                   SelectedCustomerTypeFilterChanged="@SelectedCustomerTypeFilterChanged"
                   SelectedDateRangeFilter="@SelectedDateRangeFilter"
                   SelectedDateRangeFilterChanged="@SelectedDateRangeFilterChanged"
+                  ShowMyTicketsOnly="@ShowMyTicketsOnly"
+                  ShowMyTicketsOnlyChanged="@ShowMyTicketsOnlyChanged"
                   FilteredTicketsCount="@FilteredTicketsCount"
                   HasActiveFilters="@HasActiveFilters"
                   OnFiltersChanged="@OnFiltersChanged"
@@ -36,6 +38,8 @@
     [Parameter] public EventCallback<string> SelectedCustomerTypeFilterChanged { get; set; }
     [Parameter] public string SelectedDateRangeFilter { get; set; } = "";
     [Parameter] public EventCallback<string> SelectedDateRangeFilterChanged { get; set; }
+    [Parameter] public bool ShowMyTicketsOnly { get; set; } = false;
+    [Parameter] public EventCallback<bool> ShowMyTicketsOnlyChanged { get; set; }
     [Parameter] public int FilteredTicketsCount { get; set; }
     [Parameter] public bool HasActiveFilters { get; set; }
     [Parameter] public EventCallback OnFiltersChanged { get; set; }

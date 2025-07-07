@@ -1,14 +1,22 @@
 @using CoreDesk.App.Models
 @inject MockErpService ErpService
+@inject AuthenticationService AuthService
+@inject TeamService TeamService
+@inject TicketService TicketService
 
 <div class="p-3 bg-light border-bottom">
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-6">
             <h5>Ticket #@Ticket.Id: @Ticket.Subject</h5>
             <div class="d-flex flex-wrap gap-2 mb-2">
                 <span class="badge @GetStatusBadgeClass(Ticket.Status)">@Ticket.Status</span>
                 <span class="badge @GetPriorityBadgeClass(Ticket.Priority)">@Ticket.Priority</span>
                 <span class="badge bg-light text-dark">@Ticket.AssignedToTeam</span>
+                @if (!string.IsNullOrEmpty(Ticket.AssignedToAgent))
+                {
+                    var assignedAgent = TeamService.GetAgent(Ticket.AssignedToAgent);
+                    <span class="badge bg-success">@(assignedAgent?.Name ?? "Unbekannter Agent")</span>
+                }
                 @if (!string.IsNullOrEmpty(Ticket.OrderId))
                 {
                     <span class="badge bg-info text-dark">Bestell-Nr: @Ticket.OrderId</span>
@@ -18,8 +26,40 @@
                 <strong>Kunde:</strong> @CustomerInfo.CustomerName (@CustomerInfo.CustomerType)
             </p>
         </div>
-        <div class="col-md-4">
-            <div class="d-flex justify-content-end align-items-center">
+        <div class="col-md-6">
+            <!-- Assignment Controls -->
+            <div class="mb-3">
+                <div class="d-flex justify-content-end align-items-center mb-2">
+                    <span class="me-2"><strong>Zugewiesen an:</strong></span>
+                    @if (!string.IsNullOrEmpty(Ticket.AssignedToAgent))
+                    {
+                        var assignedAgent = TeamService.GetAgent(Ticket.AssignedToAgent);
+                        <span class="badge bg-success me-2">@(assignedAgent?.Name ?? "Unbekannt")</span>
+                        @if (!AuthService.IsCurrentAgent(Ticket.AssignedToAgent))
+                        {
+                            <button @onclick="AssignToMe" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-person-plus"></i> Mir zuweisen
+                            </button>
+                        }
+                        else
+                        {
+                            <button @onclick="UnassignFromMe" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-person-dash"></i> Zuweisung aufheben
+                            </button>
+                        }
+                    }
+                    else
+                    {
+                        <span class="text-muted me-2">Nicht zugewiesen</span>
+                        <button @onclick="AssignToMe" class="btn btn-sm btn-primary">
+                            <i class="bi bi-person-plus"></i> Mir zuweisen
+                        </button>
+                    }
+                </div>
+            </div>
+            
+            <!-- Status and Priority Controls -->
+            <div class="d-flex justify-content-end align-items-center mb-2">
                 <span class="me-2"><strong>Status:</strong></span>
                 <select @onchange="OnStatusChange" class="form-select form-select-sm" style="width: auto;">
                     @foreach (var status in Enum.GetValues<TicketStatus>())
@@ -28,7 +68,7 @@
                     }
                 </select>
             </div>
-            <div class="d-flex justify-content-end align-items-center mt-2">
+            <div class="d-flex justify-content-end align-items-center">
                 <span class="me-2"><strong>Priorität:</strong></span>
                 <select @onchange="OnPriorityChange" class="form-select form-select-sm" style="width: auto;">
                     @foreach (var priority in Enum.GetValues<TicketPriority>())
@@ -128,6 +168,7 @@
     [Parameter, EditorRequired] public (string CustomerName, string CustomerType) CustomerInfo { get; set; }
     [Parameter] public EventCallback<ChangeEventArgs> OnStatusChange { get; set; }
     [Parameter] public EventCallback<ChangeEventArgs> OnPriorityChange { get; set; }
+    [Parameter] public EventCallback OnTicketUpdated { get; set; }
 
     private Customer? CustomerData { get; set; }
     private Order? SelectedOrder { get; set; }
@@ -202,5 +243,33 @@
             OrderStatus.Returned => "bg-dark",
             _ => "bg-secondary"
         };
+    }
+
+    private async Task AssignToMe()
+    {
+        var currentAgent = AuthService.GetCurrentAgent();
+        await TicketService.AssignTicketToAgentAsync(Ticket.Id, currentAgent.Id, $"Selbst zugewiesen von {currentAgent.Name}");
+        
+        // Update the ticket object
+        Ticket.AssignedToAgent = currentAgent.Id;
+        Ticket.LastUpdated = DateTime.Now;
+        
+        // Notify parent component
+        await OnTicketUpdated.InvokeAsync();
+        StateHasChanged();
+    }
+
+    private async Task UnassignFromMe()
+    {
+        var currentAgent = AuthService.GetCurrentAgent();
+        await TicketService.AssignTicketToAgentAsync(Ticket.Id, null, $"Zuweisung aufgehoben von {currentAgent.Name}");
+        
+        // Update the ticket object
+        Ticket.AssignedToAgent = null;
+        Ticket.LastUpdated = DateTime.Now;
+        
+        // Notify parent component
+        await OnTicketUpdated.InvokeAsync();
+        StateHasChanged();
     }
 }

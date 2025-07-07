@@ -20,13 +20,32 @@ public class TicketService
         CreateNewTicket("anna.meier@privat.com", "Problem mit Bestellung 100-58273", "Hallo, meine Lieferung ist noch nicht angekommen.", TicketStatus.Offen);
         CreateNewTicket("john.doe@business.com", "Anfrage zu Rechnung 9855", "Können Sie mir bitte eine Kopie der Rechnung zukommen lassen?", TicketStatus.InBearbeitung);
         CreateNewTicket("maria.garcia@privat.com", "Defekter Artikel 200-12345", "Das gelieferte Produkt funktioniert nicht richtig.", TicketStatus.Offen);
-        CreateNewTicket("tech@innovate.corp", "Technische Unterstützung benötigt", "Wir benötigen Hilfe bei der Integration Ihrer API.", TicketStatus.InBearbeitung);
         CreateNewTicket("customer@retail.shop", "Bestellung 300-67890 fehlt", "Unsere Bestellung ist nicht vollständig angekommen.", TicketStatus.Gelöst);
         CreateNewTicket("peter.mueller@home.de", "Rückgabe möglich?", "Kann ich diesen Artikel zurückgeben?", TicketStatus.Gelöst);
+        
+        // 2nd Level / Technical Support Tickets
+        CreateNewTicket("tech@innovate.corp", "API Integration Problem", "Wir haben Probleme bei der Integration Ihrer REST API. Die Authentifizierung schlägt fehl.", TicketStatus.InBearbeitung, "2nd-Level", TicketPriority.Hoch);
+        CreateNewTicket("developer@startup.io", "Webhook Fehler 500", "Unsere Webhooks erhalten ständig 500 Fehler. Bitte prüfen Sie die Serverlogik.", TicketStatus.Offen, "2nd-Level", TicketPriority.Kritisch);
+        CreateNewTicket("admin@company.com", "Bulk Import Bug", "Der Bulk-Import von Produkten funktioniert nicht korrekt. Einige Felder werden nicht übernommen.", TicketStatus.Offen, "2nd-Level");
+        CreateNewTicket("support@webshop.de", "Performance Issues", "Die API-Antwortzeiten sind sehr langsam geworden. Bitte untersuchen Sie das Problem.", TicketStatus.InBearbeitung, "2nd-Level", TicketPriority.Hoch);
+        
+        // After-Sales Tickets
+        CreateNewTicket("kunde1@email.de", "Retoure Artikel 400-99876", "Ich möchte den Artikel 400-99876 zurücksenden. Er entspricht nicht der Beschreibung.", TicketStatus.Offen, "After-Sales");
+        CreateNewTicket("shopping@family.com", "Umtausch defektes Produkt", "Das gelieferte Produkt ist defekt angekommen. Ich möchte es umtauschen.", TicketStatus.InBearbeitung, "After-Sales", TicketPriority.Normal);
+        CreateNewTicket("buyer@home.net", "Garantiefall 500-11223", "Artikel 500-11223 ist nach 3 Monaten kaputt gegangen. Ist das ein Garantiefall?", TicketStatus.Offen, "After-Sales");
+        CreateNewTicket("return@customer.org", "Rückgabe ohne Verpackung", "Kann ich einen Artikel auch ohne Originalverpackung zurückgeben?", TicketStatus.Gelöst, "After-Sales");
+        
+        // Financial Support Tickets
+        CreateNewTicket("buchhaltung@firma.de", "Zahlungserinnerung Rechnung 7788", "Wir haben eine Mahnung erhalten, aber die Rechnung bereits bezahlt.", TicketStatus.Offen, "Finanzen");
+        CreateNewTicket("finance@corporation.com", "Stornierung Bestellung 600-55443", "Wir möchten die Bestellung 600-55443 stornieren und eine Rückerstattung erhalten.", TicketStatus.InBearbeitung, "Finanzen");
         
         // Ältere Tickets für Datums-Filter
         CreateOlderTicket("support@acme.inc", "Wartungsvertrag verlängern", "Unser Wartungsvertrag läuft bald ab.", TicketStatus.Offen, DateTime.Now.AddDays(-14));
         CreateOlderTicket("anna.meier@privat.com", "Alte Anfrage 400-11111", "Eine ältere Anfrage.", TicketStatus.Gelöst, DateTime.Now.AddDays(-60));
+        CreateOlderTicket("legacy@oldcustomer.com", "Alte technische Anfrage", "Probleme mit der alten API-Version.", TicketStatus.Geschlossen, DateTime.Now.AddDays(-90), "2nd-Level");
+        
+        // Assign some tickets to the current agent (agent1 - Sarah Weber) for testing "My Tickets" filter
+        AssignTestTicketsToAgent();
     }
     
     public Task<List<Ticket>> GetAllTicketsAsync()
@@ -156,7 +175,7 @@ public class TicketService
         return Task.CompletedTask;
     }
 
-    public Task AssignTicketToAgentAsync(int ticketId, string agentId, string? reason = null)
+    public Task AssignTicketToAgentAsync(int ticketId, string? agentId, string? reason = null)
     {
         if (_tickets.TryGetValue(ticketId, out var ticket))
         {
@@ -168,9 +187,12 @@ public class TicketService
             {
                 Id = ticket.Updates.Count + 1,
                 Author = "System",
-                Content = $"Ticket " + (oldAgent != null ? $"von Agent '{oldAgent}' " : "") + 
-                         $"an Agent '{agentId}' zugewiesen" + 
-                         (reason != null ? $". Grund: {reason}" : ""),
+                Content = agentId != null 
+                    ? $"Ticket " + (oldAgent != null ? $"von Agent '{oldAgent}' " : "") + 
+                      $"an Agent '{agentId}' zugewiesen" + 
+                      (reason != null ? $". Grund: {reason}" : "")
+                    : $"Ticket-Zuweisung von Agent '{oldAgent}' aufgehoben" + 
+                      (reason != null ? $". Grund: {reason}" : ""),
                 Timestamp = DateTime.Now,
                 IsInternalNote = true,
                 Type = TicketUpdateType.AgentAssignment
@@ -198,41 +220,11 @@ public class TicketService
                 IsInternalNote = true,
                 Type = TicketUpdateType.InternalNote
             };
-            ticket.Updates.Add(priorityUpdate);
         }
         return Task.CompletedTask;
     }
 
-    // For testing internal notes
-    public Task AddTestInternalNoteAsync(int ticketId)
-    {
-        if (_tickets.TryGetValue(ticketId, out var ticket))
-        {
-            var internalUpdate = new TicketUpdate
-            {
-                Id = ticket.Updates.Count + 1,
-                Author = "Test Support",
-                Content = "Dies ist eine TEST INTERNE NOTIZ. Sollte nur für das Support-Team sichtbar sein und in LILA angezeigt werden.",
-                Timestamp = DateTime.Now,
-                IsInternalNote = true,
-                Type = TicketUpdateType.InternalNote
-            };
-            
-            ticket.Updates.Add(internalUpdate);
-            
-            // Add a debugging log to check the note was added correctly
-            Console.WriteLine($"Added internal note to ticket {ticketId}: IsInternalNote={internalUpdate.IsInternalNote}");
-            
-            // Log all updates for this ticket
-            foreach (var update in ticket.Updates)
-            {
-                Console.WriteLine($"Ticket {ticketId} update: Author={update.Author}, IsInternal={update.IsInternalNote}, Content={update.Content.Substring(0, Math.Min(20, update.Content.Length))}...");
-            }
-        }
-        return Task.CompletedTask;
-    }
-
-    private void CreateNewTicket(string from, string subject, string body, TicketStatus status = TicketStatus.Offen)
+    private void CreateNewTicket(string from, string subject, string body, TicketStatus status = TicketStatus.Offen, string team = "1st-Level", TicketPriority priority = TicketPriority.Normal)
     {
         var id = Interlocked.Increment(ref _nextId);
         var ticket = new Ticket
@@ -241,9 +233,10 @@ public class TicketService
             CustomerEmail = from,
             Subject = subject,
             Status = status,
+            Priority = priority,
             CreatedAt = DateTime.Now,
             LastUpdated = DateTime.Now,
-            AssignedToTeam = "1st-Level",
+            AssignedToTeam = team,
             OrderId = ExtractOrderId(subject + " " + body)
         };
         ticket.Updates.Add(new TicketUpdate 
@@ -257,7 +250,7 @@ public class TicketService
         _tickets.TryAdd(id, ticket);
     }
 
-    private void CreateOlderTicket(string from, string subject, string body, TicketStatus status, DateTime createdAt)
+    private void CreateOlderTicket(string from, string subject, string body, TicketStatus status, DateTime createdAt, string team = "1st-Level", TicketPriority priority = TicketPriority.Normal)
     {
         var id = Interlocked.Increment(ref _nextId);
         var ticket = new Ticket
@@ -266,9 +259,10 @@ public class TicketService
             CustomerEmail = from,
             Subject = subject,
             Status = status,
+            Priority = priority,
             CreatedAt = createdAt,
             LastUpdated = createdAt,
-            AssignedToTeam = "1st-Level",
+            AssignedToTeam = team,
             OrderId = ExtractOrderId(subject + " " + body)
         };
         ticket.Updates.Add(new TicketUpdate 
@@ -286,5 +280,32 @@ public class TicketService
     {
         var match = Regex.Match(text, @"\b(\d{3}-\d{5,})\b"); // Sucht nach Format 100-58273
         return match.Success ? match.Value : null;
+    }
+    
+    private void AssignTestTicketsToAgent()
+    {
+        // Assign some tickets to agent1 (Sarah Weber) for testing "My Tickets" filter
+        var ticketsList = _tickets.Values.ToList();
+        var ticketsToAssign = new[] { 1, 3, 5, 7, 9 }; // Assign every other ticket to agent1
+        
+        foreach (var ticketId in ticketsToAssign)
+        {
+            if (_tickets.TryGetValue(ticketId, out var ticket))
+            {
+                ticket.AssignedToAgent = "agent1";
+                ticket.LastUpdated = DateTime.Now;
+                
+                // Add assignment update
+                ticket.Updates.Add(new TicketUpdate
+                {
+                    Id = ticket.Updates.Count + 1,
+                    Author = "System",
+                    Content = "Ticket automatisch an Sarah Weber zugewiesen (Demo-Daten)",
+                    Timestamp = DateTime.Now,
+                    IsInternalNote = true,
+                    Type = TicketUpdateType.AgentAssignment
+                });
+            }
+        }
     }
 }

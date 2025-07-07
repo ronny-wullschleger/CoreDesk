@@ -18,10 +18,21 @@ public class TicketFilterService
         TicketPriority? priorityFilter,
         TicketStatus? statusFilter, 
         string customerTypeFilter, 
-        string dateRangeFilter)
+        string dateRangeFilter,
+        bool showMyTicketsOnly = false,
+        string? currentAgentId = null)
     {
         return tickets.Where(ticket => 
         {
+            // My Tickets filter - show only tickets assigned to current agent
+            if (showMyTicketsOnly && !string.IsNullOrEmpty(currentAgentId))
+            {
+                if (ticket.AssignedToAgent != currentAgentId)
+                {
+                    return false;
+                }
+            }
+
             // Search filter
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
@@ -78,14 +89,15 @@ public class TicketFilterService
         }).OrderByDescending(t => t.Priority).ThenByDescending(t => t.CreatedAt).ToList();
     }
 
-    public bool HasActiveFilters(string searchTerm, string teamFilter, TicketPriority? priorityFilter, TicketStatus? statusFilter, string customerTypeFilter, string dateRangeFilter)
+    public bool HasActiveFilters(string searchTerm, string teamFilter, TicketPriority? priorityFilter, TicketStatus? statusFilter, string customerTypeFilter, string dateRangeFilter, bool showMyTicketsOnly = false)
     {
         return !string.IsNullOrWhiteSpace(searchTerm) ||
                !string.IsNullOrWhiteSpace(teamFilter) ||
                priorityFilter.HasValue ||
                statusFilter.HasValue ||
                !string.IsNullOrWhiteSpace(customerTypeFilter) ||
-               !string.IsNullOrWhiteSpace(dateRangeFilter);
+               !string.IsNullOrWhiteSpace(dateRangeFilter) ||
+               showMyTicketsOnly;
     }
 
     private bool IsTicketInDateRange(Ticket ticket, string dateRangeFilter)

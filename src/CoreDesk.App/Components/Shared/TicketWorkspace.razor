@@ -6,7 +6,8 @@
         <TicketHeaderEnhanced Ticket="@SelectedTicket" 
                      CustomerInfo="@CustomerInfo" 
                      OnStatusChange="@OnStatusChange"
-                     OnPriorityChange="@OnPriorityChange" />
+                     OnPriorityChange="@OnPriorityChange"
+                     OnTicketUpdated="@OnTicketUpdated" />
 
         <TicketUpdates Updates="@SelectedTicket.Updates" />
 
@@ -34,4 +35,5 @@
     [Parameter] public EventCallback<ChangeEventArgs> OnStatusChange { get; set; }
     [Parameter] public EventCallback<ChangeEventArgs> OnPriorityChange { get; set; }
     [Parameter] public EventCallback OnAddReply { get; set; }
+    [Parameter] public EventCallback OnTicketUpdated { get; set; }
 }
