@@ -1,27 +1,63 @@
 @using CoreDesk.App.Models
 
 <div class="p-3">
+    @* Debug info *@
+    <div class="small text-muted mb-2">
+        Total updates: @Updates.Count(), Internal notes: @Updates.Count(u => u.IsInternalNote)
+    </div>
+    
     @foreach (var update in Updates.OrderBy(u => u.Timestamp))
     {
-        <div class="card mb-3 @(update.IsInternalNote ? "bg-light-yellow border-warning" : "")">
-            <div class="card-header d-flex justify-content-between @(update.IsInternalNote ? "bg-warning-subtle" : "")">
-                <strong>
-                    @if (update.IsInternalNote)
-                    {
+        @if (update.Author == "System")
+        {
+            <div class="card mb-3 bg-light-yellow border-warning">
+                <div class="card-header d-flex justify-content-between bg-warning-subtle">
+                    <strong>
                         <i class="bi bi-gear-fill me-1"></i>
-                    }
-                    @update.Author
-                </strong>
-                <small>@update.Timestamp.ToString("g")</small>
+                        @update.Author
+                    </strong>
+                    <small>@update.Timestamp.ToString("g")</small>
+                </div>
+                <div class="card-body">
+                    <p class="card-text" style="white-space: pre-wrap;">@update.Content</p>
+                </div>
             </div>
-            <div class="card-body">
-                <p class="card-text" style="white-space: pre-wrap;">@update.Content</p>
+        }
+        else if (update.IsInternalNote == true)
+        {
+            <div class="card mb-3 internal-note border-purple">
+                <div class="card-header d-flex justify-content-between internal-note-header text-purple">
+                    <strong>
+                        <i class="bi bi-eye-slash-fill me-1"></i>
+                        @update.Author (Interne Notiz)
+                    </strong>
+                    <small>@update.Timestamp.ToString("g")</small>
+                </div>
+                <div class="card-body">
+                    <p class="card-text" style="white-space: pre-wrap;">@update.Content</p>
+                </div>
             </div>
-        </div>
+        }
+        else
+        {
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between">
+                    <strong>
+                        <i class="bi bi-person-fill me-1"></i>
+                        @update.Author
+                    </strong>
+                    <small>@update.Timestamp.ToString("g")</small>
+                </div>
+                <div class="card-body">
+                    <p class="card-text" style="white-space: pre-wrap;">@update.Content</p>
+                </div>
+            </div>
+        }
     }
 </div>
 
 <style>
+    /* Original system message styling */
     .bg-light-yellow { 
         background-color: #fffacd; 
     }
@@ -30,6 +66,22 @@
     }
     .border-warning { 
         border-color: #ffc107 !important; 
+    }
+    
+    /* Internal note styling - purple theme for distinctiveness */
+    div.card.internal-note {
+        background-color: #f3e5f5 !important;
+    }
+    div.card-header.internal-note-header {
+        background-color: #e1bee7 !important;
+    }
+    div.card.border-purple {
+        border-color: #9c27b0 !important;
+        border-width: 2px !important;
+    }
+    .text-purple {
+        color: #9c27b0 !important;
+        font-weight: bold;
     }
 </style>
 

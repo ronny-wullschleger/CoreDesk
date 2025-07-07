@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject TicketService TicketRepo
 @inject MockErpService ErpService
@@ -29,7 +29,25 @@
                         ReplyContent="@newReplyContent"
                         ReplyContentChanged="@OnReplyContentChanged"
                         OnStatusChange="@OnStatusChange"
-                        OnAddReply="@AddReply" />
+                        OnAddReply="@AddReply"
+                        IsInternalNote="@isInternalNote"
+                        IsInternalNoteChanged="@OnIsInternalNoteChanged" />
+        
+        @if (selectedTicket != null)
+        {
+            <div class="text-center mt-3 mb-3">
+                <button @onclick="AddTestInternalNote" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-bug"></i> Test: Interne Notiz Hinzufügen
+                </button>
+            </div>
+        }
+                        
+        @if (selectedTicket != null)
+        {
+            <div class="text-center mt-3">
+                <button @onclick="AddTestInternalNote" class="btn btn-sm btn-secondary">Test: Interne Notiz Hinzufügen</button>
+            </div>
+        }
     </div>
 </div>
 
@@ -39,6 +57,7 @@
     private Ticket? selectedTicket;
     private (string CustomerName, string CustomerType) customerInfo;
     private string newReplyContent = "";
+    private bool isInternalNote = false;
     
     // Filter variables
     private string searchTerm = "";
@@ -59,6 +78,7 @@
         {
             customerInfo = await ErpService.GetCustomerInfoByEmailAsync(selectedTicket.CustomerEmail);
             newReplyContent = "";
+            isInternalNote = false;
         }
     }
 
@@ -74,13 +94,14 @@
             Author = "Support Agent", // Hardcoded for MVP
             Content = newReplyContent,
             Timestamp = DateTime.Now,
-            IsInternalNote = false
+            IsInternalNote = isInternalNote
         };
 
         await TicketRepo.AddTicketUpdateAsync(selectedTicket.Id, update);
         
         // Clear the reply content and refresh the ticket
         newReplyContent = "";
+        isInternalNote = false;
         await SelectTicket(selectedTicket.Id);
         StateHasChanged();
     }
@@ -108,6 +129,13 @@
     private Task OnReplyContentChanged(string value)
     {
         newReplyContent = value;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task OnIsInternalNoteChanged(bool value)
+    {
+        isInternalNote = value;
         StateHasChanged();
         return Task.CompletedTask;
     }
@@ -168,5 +196,15 @@
     private bool HasActiveFilters()
     {
         return FilterService.HasActiveFilters(searchTerm, selectedStatusFilter, selectedCustomerTypeFilter, selectedDateRangeFilter);
+    }
+
+    // Test internal note functionality
+    private async Task AddTestInternalNote()
+    {
+        if (selectedTicket != null)
+        {
+            await TicketRepo.AddTestInternalNoteAsync(selectedTicket.Id);
+            await SelectTicket(selectedTicket.Id);
+        }
     }
 }

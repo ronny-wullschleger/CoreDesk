@@ -42,7 +42,12 @@ public class TicketService
         if (_tickets.TryGetValue(ticketId, out var ticket))
         {
             ticket.Updates.Add(update);
-            ticket.Status = TicketStatus.InBearbeitung;
+            
+            // Only change status to "InBearbeitung" if it's not an internal note
+            if (!update.IsInternalNote)
+            {
+                ticket.Status = TicketStatus.InBearbeitung;
+            }
         }
         return Task.CompletedTask;
     }
@@ -54,15 +59,42 @@ public class TicketService
             var oldStatus = ticket.Status;
             ticket.Status = newStatus;
             
-            // Add status change update
+            // Add status change update - system messages are not internal notes
             var statusUpdate = new TicketUpdate
             {
                 Author = "System",
                 Content = $"Status geändert von {oldStatus} zu {newStatus}",
                 Timestamp = DateTime.Now,
-                IsInternalNote = true
+                IsInternalNote = false
             };
             ticket.Updates.Add(statusUpdate);
+        }
+        return Task.CompletedTask;
+    }
+
+    // For testing internal notes
+    public Task AddTestInternalNoteAsync(int ticketId)
+    {
+        if (_tickets.TryGetValue(ticketId, out var ticket))
+        {
+            var internalUpdate = new TicketUpdate
+            {
+                Author = "Test Support",
+                Content = "Dies ist eine TEST INTERNE NOTIZ. Sollte nur für das Support-Team sichtbar sein und in LILA angezeigt werden.",
+                Timestamp = DateTime.Now,
+                IsInternalNote = true
+            };
+            
+            ticket.Updates.Add(internalUpdate);
+            
+            // Add a debugging log to check the note was added correctly
+            Console.WriteLine($"Added internal note to ticket {ticketId}: IsInternalNote={internalUpdate.IsInternalNote}");
+            
+            // Log all updates for this ticket
+            foreach (var update in ticket.Updates)
+            {
+                Console.WriteLine($"Ticket {ticketId} update: Author={update.Author}, IsInternal={update.IsInternalNote}, Content={update.Content.Substring(0, Math.Min(20, update.Content.Length))}...");
+            }
         }
         return Task.CompletedTask;
     }

@@ -5,12 +5,21 @@
             <textarea @bind="localContent" @bind:event="oninput" 
                      class="form-control" rows="5" 
                      placeholder="Schreiben Sie Ihre Antwort..."></textarea>
+            
+            <div class="form-check mt-3">
+                <input class="form-check-input" type="checkbox" id="internalNoteCheck" 
+                       @bind="localIsInternalNote" @bind:event="onchange" />
+                <label class="form-check-label" for="internalNoteCheck">
+                    <span class="text-secondary">Interne Notiz (nicht an Kunden senden)</span>
+                </label>
+            </div>
+            
             <button @onclick="HandleSubmit" class="btn btn-primary mt-3" disabled="@(IsSubmitting || string.IsNullOrWhiteSpace(localContent))">
                 @if (IsSubmitting)
                 {
                     <span class="spinner-border spinner-border-sm me-2" role="status"></span>
                 }
-                Antwort Senden
+                @(localIsInternalNote ? "Interne Notiz Hinzufügen" : "Antwort Senden")
             </button>
         </div>
     </div>
@@ -19,10 +28,13 @@
 @code {
     [Parameter] public string ReplyContent { get; set; } = "";
     [Parameter] public EventCallback<string> ReplyContentChanged { get; set; }
+    [Parameter] public bool IsInternalNote { get; set; } = false;
+    [Parameter] public EventCallback<bool> IsInternalNoteChanged { get; set; }
     [Parameter] public EventCallback OnSubmit { get; set; }
 
     private bool IsSubmitting { get; set; } = false;
     private string localContent = "";
+    private bool localIsInternalNote = false;
 
     protected override void OnParametersSet()
     {
@@ -30,6 +42,12 @@
         if (localContent != ReplyContent)
         {
             localContent = ReplyContent;
+        }
+        
+        // Sync internal note state
+        if (localIsInternalNote != IsInternalNote)
+        {
+            localIsInternalNote = IsInternalNote;
         }
     }
 
@@ -43,8 +61,9 @@
 
         try
         {
-            // Update parent with current content before submitting
+            // Update parent with current content and internal note state before submitting
             await ReplyContentChanged.InvokeAsync(localContent);
+            await IsInternalNoteChanged.InvokeAsync(localIsInternalNote);
             
             // Submit the reply
             await OnSubmit.InvokeAsync();
@@ -52,6 +71,10 @@
             // Clear the form after successful submission
             localContent = "";
             await ReplyContentChanged.InvokeAsync("");
+            
+            // Reset internal note flag to false after submission
+            localIsInternalNote = false;
+            await IsInternalNoteChanged.InvokeAsync(false);
         }
         finally
         {
