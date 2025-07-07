@@ -3,9 +3,10 @@
 <div class="col-8 vh-100 overflow-auto">
     @if (SelectedTicket is not null)
     {
-        <TicketHeader Ticket="@SelectedTicket" 
+        <TicketHeaderEnhanced Ticket="@SelectedTicket" 
                      CustomerInfo="@CustomerInfo" 
-                     OnStatusChange="@OnStatusChange" />
+                     OnStatusChange="@OnStatusChange"
+                     OnPriorityChange="@OnPriorityChange" />
 
         <TicketUpdates Updates="@SelectedTicket.Updates" />
 
@@ -31,5 +32,6 @@
     [Parameter] public bool IsInternalNote { get; set; } = false;
     [Parameter] public EventCallback<bool> IsInternalNoteChanged { get; set; }
     [Parameter] public EventCallback<ChangeEventArgs> OnStatusChange { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnPriorityChange { get; set; }
     [Parameter] public EventCallback OnAddReply { get; set; }
 }

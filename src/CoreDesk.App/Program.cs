@@ -8,10 +8,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// --- Unsere eigenen Services für das MVP ---
-// Singleton, damit die Daten während der Laufzeit im Speicher bleiben
-builder.Services.AddSingleton<TicketService>(); 
+// --- CoreDesk Services für das erweiterte MVP ---
+// Order matters for dependency injection
 builder.Services.AddSingleton<MockErpService>();
+builder.Services.AddSingleton<TeamService>();
+builder.Services.AddSingleton<AutomationService>();
+builder.Services.AddSingleton<TicketService>();
 builder.Services.AddSingleton<TicketFilterService>();
 
 var app = builder.Build();

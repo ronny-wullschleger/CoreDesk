@@ -3,6 +3,10 @@
 <div class="col-4 vh-100 overflow-auto border-end">
     <TicketFilters SearchTerm="@SearchTerm"
                   SearchTermChanged="@SearchTermChanged"
+                  SelectedTeamFilter="@SelectedTeamFilter"
+                  SelectedTeamFilterChanged="@SelectedTeamFilterChanged"
+                  SelectedPriorityFilter="@SelectedPriorityFilter"
+                  SelectedPriorityFilterChanged="@SelectedPriorityFilterChanged"
                   SelectedStatusFilter="@SelectedStatusFilter"
                   SelectedStatusFilterChanged="@SelectedStatusFilterChanged"
                   SelectedCustomerTypeFilter="@SelectedCustomerTypeFilter"
@@ -22,6 +26,10 @@
 @code {
     [Parameter] public string SearchTerm { get; set; } = "";
     [Parameter] public EventCallback<string> SearchTermChanged { get; set; }
+    [Parameter] public string SelectedTeamFilter { get; set; } = "";
+    [Parameter] public EventCallback<string> SelectedTeamFilterChanged { get; set; }
+    [Parameter] public TicketPriority? SelectedPriorityFilter { get; set; }
+    [Parameter] public EventCallback<TicketPriority?> SelectedPriorityFilterChanged { get; set; }
     [Parameter] public TicketStatus? SelectedStatusFilter { get; set; }
     [Parameter] public EventCallback<TicketStatus?> SelectedStatusFilterChanged { get; set; }
     [Parameter] public string SelectedCustomerTypeFilter { get; set; } = "";

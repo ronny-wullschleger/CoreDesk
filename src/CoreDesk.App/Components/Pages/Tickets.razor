@@ -4,12 +4,16 @@
 @inject MockErpService ErpService
 @inject TicketFilterService FilterService
 
-<PageTitle>CoreDesk MVP</PageTitle>
+<PageTitle>CoreDesk - Erweiterte Ticket-Verwaltung</PageTitle>
 
 <div class="container-fluid">
     <div class="row">
         <TicketSidebar SearchTerm="@searchTerm"
                       SearchTermChanged="@OnSearchTermChanged"
+                      SelectedTeamFilter="@selectedTeamFilter"
+                      SelectedTeamFilterChanged="@OnTeamFilterChanged"
+                      SelectedPriorityFilter="@selectedPriorityFilter"
+                      SelectedPriorityFilterChanged="@OnPriorityFilterChanged"
                       SelectedStatusFilter="@selectedStatusFilter"
                       SelectedStatusFilterChanged="@OnStatusFilterChanged"
                       SelectedCustomerTypeFilter="@selectedCustomerTypeFilter"
@@ -29,6 +33,7 @@
                         ReplyContent="@newReplyContent"
                         ReplyContentChanged="@OnReplyContentChanged"
                         OnStatusChange="@OnStatusChange"
+                        OnPriorityChange="@OnPriorityChange"
                         OnAddReply="@AddReply"
                         IsInternalNote="@isInternalNote"
                         IsInternalNoteChanged="@OnIsInternalNoteChanged" />
@@ -61,6 +66,8 @@
     
     // Filter variables
     private string searchTerm = "";
+    private string selectedTeamFilter = "";
+    private TicketPriority? selectedPriorityFilter;
     private TicketStatus? selectedStatusFilter;
     private string selectedCustomerTypeFilter = "";
     private string selectedDateRangeFilter = "";
@@ -126,6 +133,26 @@
         }
     }
 
+    private async Task OnPriorityChange(ChangeEventArgs e)
+    {
+        if (selectedTicket is null || e.Value is null)
+        {
+            return;
+        }
+
+        if (Enum.TryParse<TicketPriority>(e.Value.ToString(), out var newPriority))
+        {
+            await TicketRepo.SetTicketPriorityAsync(selectedTicket.Id, newPriority, "Manuell geändert durch Agent");
+            
+            // Refresh ticket details to show the priority change update
+            await SelectTicket(selectedTicket.Id);
+            
+            // Update the tickets list to reflect the new priority
+            tickets = await TicketRepo.GetAllTicketsAsync();
+            await ApplyFilters();
+        }
+    }
+
     private Task OnReplyContentChanged(string value)
     {
         newReplyContent = value;
@@ -144,6 +171,18 @@
     private void OnSearchTermChanged(string value)
     {
         searchTerm = value;
+        ApplyFiltersSync();
+    }
+
+    private void OnTeamFilterChanged(string value)
+    {
+        selectedTeamFilter = value;
+        ApplyFiltersSync();
+    }
+
+    private void OnPriorityFilterChanged(TicketPriority? value)
+    {
+        selectedPriorityFilter = value;
         ApplyFiltersSync();
     }
 
@@ -177,6 +216,8 @@
         filteredTickets = FilterService.ApplyFilters(
             tickets, 
             searchTerm, 
+            selectedTeamFilter,
+            selectedPriorityFilter,
             selectedStatusFilter, 
             selectedCustomerTypeFilter, 
             selectedDateRangeFilter);
@@ -187,6 +228,8 @@
     private void ClearFilters()
     {
         searchTerm = "";
+        selectedTeamFilter = "";
+        selectedPriorityFilter = null;
         selectedStatusFilter = null;
         selectedCustomerTypeFilter = "";
         selectedDateRangeFilter = "";
@@ -195,7 +238,7 @@
 
     private bool HasActiveFilters()
     {
-        return FilterService.HasActiveFilters(searchTerm, selectedStatusFilter, selectedCustomerTypeFilter, selectedDateRangeFilter);
+        return FilterService.HasActiveFilters(searchTerm, selectedTeamFilter, selectedPriorityFilter, selectedStatusFilter, selectedCustomerTypeFilter, selectedDateRangeFilter);
     }
 
     // Test internal note functionality

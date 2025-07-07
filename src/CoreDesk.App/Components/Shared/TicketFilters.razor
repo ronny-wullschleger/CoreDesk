@@ -1,7 +1,30 @@
 @using CoreDesk.App.Models
 
-<div class="p-3 sticky-top bg-light border-bottom">
-    <h4 class="mb-3">Tickets (@FilteredTicketsCount)</h4>
+<div class="p-3 bg-light border-bottom">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Tickets (@FilteredTicketsCount)</h4>
+        <div class="btn-group btn-group-sm" role="group">
+            <input type="radio" class="btn-check" name="teamFilter" id="all-teams" value="" 
+                   checked="@(string.IsNullOrEmpty(SelectedTeamFilter))" @onchange="OnTeamFilterChange">
+            <label class="btn btn-outline-primary" for="all-teams">Alle</label>
+            
+            <input type="radio" class="btn-check" name="teamFilter" id="team-1st" value="1st-Level"
+                   checked="@(SelectedTeamFilter == "1st-Level")" @onchange="OnTeamFilterChange">
+            <label class="btn btn-outline-primary" for="team-1st">1st-Level</label>
+            
+            <input type="radio" class="btn-check" name="teamFilter" id="team-2nd" value="2nd-Level"
+                   checked="@(SelectedTeamFilter == "2nd-Level")" @onchange="OnTeamFilterChange">
+            <label class="btn btn-outline-primary" for="team-2nd">2nd-Level</label>
+            
+            <input type="radio" class="btn-check" name="teamFilter" id="team-finance" value="Finanzen"
+                   checked="@(SelectedTeamFilter == "Finanzen")" @onchange="OnTeamFilterChange">
+            <label class="btn btn-outline-primary" for="team-finance">Finanzen</label>
+            
+            <input type="radio" class="btn-check" name="teamFilter" id="team-aftersales" value="After-Sales"
+                   checked="@(SelectedTeamFilter == "After-Sales")" @onchange="OnTeamFilterChange">
+            <label class="btn btn-outline-primary" for="team-aftersales">After-Sales</label>
+        </div>
+    </div>
     
     <!-- Search Filter -->
     <div class="mb-2">
@@ -10,13 +33,13 @@
                placeholder="Suche nach Betreff, E-Mail oder Bestell-Nr..." />
     </div>
     
-    <!-- Status Filter -->
+    <!-- Priority Filter -->
     <div class="mb-2">
-        <select @onchange="OnStatusFilterChange" class="form-select form-select-sm">
-            <option value="">Alle Status</option>
-            @foreach (var status in Enum.GetValues<TicketStatus>())
+        <select @onchange="OnPriorityFilterChange" class="form-select form-select-sm">
+            <option value="">Alle Prioritäten</option>
+            @foreach (var priority in Enum.GetValues<TicketPriority>())
             {
-                <option value="@status" selected="@(SelectedStatusFilter == status)">@status</option>
+                <option value="@priority" selected="@(SelectedPriorityFilter == priority)">@priority</option>
             }
         </select>
     </div>
@@ -53,6 +76,12 @@
     [Parameter] public string SearchTerm { get; set; } = "";
     [Parameter] public EventCallback<string> SearchTermChanged { get; set; }
     
+    [Parameter] public string SelectedTeamFilter { get; set; } = "";
+    [Parameter] public EventCallback<string> SelectedTeamFilterChanged { get; set; }
+    
+    [Parameter] public TicketPriority? SelectedPriorityFilter { get; set; }
+    [Parameter] public EventCallback<TicketPriority?> SelectedPriorityFilterChanged { get; set; }
+    
     [Parameter] public TicketStatus? SelectedStatusFilter { get; set; }
     [Parameter] public EventCallback<TicketStatus?> SelectedStatusFilterChanged { get; set; }
     
@@ -72,6 +101,28 @@
     {
         var newValue = e.Value?.ToString() ?? "";
         await SearchTermChanged.InvokeAsync(newValue);
+    }
+
+    private async Task OnTeamFilterChange(ChangeEventArgs e)
+    {
+        var newValue = e.Value?.ToString() ?? "";
+        await SelectedTeamFilterChanged.InvokeAsync(newValue);
+        await OnFiltersChanged.InvokeAsync();
+    }
+
+    private async Task OnPriorityFilterChange(ChangeEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(e.Value?.ToString()))
+        {
+            SelectedPriorityFilter = null;
+        }
+        else if (Enum.TryParse<TicketPriority>(e.Value.ToString(), out var priority))
+        {
+            SelectedPriorityFilter = priority;
+        }
+        
+        await SelectedPriorityFilterChanged.InvokeAsync(SelectedPriorityFilter);
+        await OnFiltersChanged.InvokeAsync();
     }
 
     private async Task OnStatusFilterChange(ChangeEventArgs e)

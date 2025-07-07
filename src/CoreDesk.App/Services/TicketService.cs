@@ -10,9 +10,12 @@ public class TicketService
 {
     private readonly ConcurrentDictionary<int, Ticket> _tickets = new();
     private int _nextId = 1;
+    private readonly AutomationService? _automationService;
 
-    public TicketService()
+    public TicketService(AutomationService? automationService = null)
     {
+        _automationService = automationService;
+        
         // Start mit Demo-Tickets für verschiedene Filter-Tests
         CreateNewTicket("anna.meier@privat.com", "Problem mit Bestellung 100-58273", "Hallo, meine Lieferung ist noch nicht angekommen.", TicketStatus.Offen);
         CreateNewTicket("john.doe@business.com", "Anfrage zu Rechnung 9855", "Können Sie mir bitte eine Kopie der Rechnung zukommen lassen?", TicketStatus.InBearbeitung);
@@ -37,19 +40,73 @@ public class TicketService
         return Task.FromResult(ticket);
     }
 
-    public Task AddTicketUpdateAsync(int ticketId, TicketUpdate update)
+    public Task<List<Ticket>> GetTicketsByTeamAsync(string teamName)
+    {
+        var tickets = _tickets.Values.Where(t => t.AssignedToTeam == teamName).OrderByDescending(t => t.CreatedAt).ToList();
+        return Task.FromResult(tickets);
+    }
+
+    public Task<List<Ticket>> GetTicketsByAgentAsync(string agentId)
+    {
+        var tickets = _tickets.Values.Where(t => t.AssignedToAgent == agentId).OrderByDescending(t => t.CreatedAt).ToList();
+        return Task.FromResult(tickets);
+    }
+
+    public async Task<int> CreateTicketAsync(string customerEmail, string subject, string content)
+    {
+        var id = Interlocked.Increment(ref _nextId);
+        var ticket = new Ticket
+        {
+            Id = id,
+            CustomerEmail = customerEmail,
+            Subject = subject,
+            Status = TicketStatus.Offen,
+            CreatedAt = DateTime.Now,
+            LastUpdated = DateTime.Now,
+            AssignedToTeam = "1st-Level" // Default
+        };
+        
+        // Add initial customer message
+        ticket.Updates.Add(new TicketUpdate 
+        { 
+            Author = customerEmail, 
+            Content = content, 
+            Timestamp = DateTime.Now,
+            Type = TicketUpdateType.Reply
+        });
+
+        // Apply automation if available
+        if (_automationService != null)
+        {
+            ticket = await _automationService.ProcessNewTicketAsync(ticket);
+        }
+
+        _tickets.TryAdd(id, ticket);
+        return id;
+    }
+
+    public async Task AddTicketUpdateAsync(int ticketId, TicketUpdate update)
     {
         if (_tickets.TryGetValue(ticketId, out var ticket))
         {
+            update.Id = ticket.Updates.Count + 1;
             ticket.Updates.Add(update);
             
-            // Only change status to "InBearbeitung" if it's not an internal note
-            if (!update.IsInternalNote)
+            // Apply automation if available
+            if (_automationService != null)
             {
-                ticket.Status = TicketStatus.InBearbeitung;
+                await _automationService.ProcessTicketUpdateAsync(ticket, update);
+            }
+            else
+            {
+                // Fallback logic if no automation service
+                if (!update.IsInternalNote)
+                {
+                    ticket.Status = TicketStatus.InBearbeitung;
+                }
+                ticket.LastUpdated = DateTime.Now;
             }
         }
-        return Task.CompletedTask;
     }
 
     public Task UpdateTicketStatusAsync(int ticketId, TicketStatus newStatus)
@@ -58,16 +115,90 @@ public class TicketService
         {
             var oldStatus = ticket.Status;
             ticket.Status = newStatus;
+            ticket.LastUpdated = DateTime.Now;
             
             // Add status change update - system messages are not internal notes
             var statusUpdate = new TicketUpdate
             {
+                Id = ticket.Updates.Count + 1,
                 Author = "System",
                 Content = $"Status geändert von {oldStatus} zu {newStatus}",
                 Timestamp = DateTime.Now,
-                IsInternalNote = false
+                IsInternalNote = false,
+                Type = TicketUpdateType.StatusChange
             };
             ticket.Updates.Add(statusUpdate);
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task AssignTicketToTeamAsync(int ticketId, string teamName, string? reason = null)
+    {
+        if (_tickets.TryGetValue(ticketId, out var ticket))
+        {
+            var oldTeam = ticket.AssignedToTeam;
+            ticket.AssignedToTeam = teamName;
+            ticket.AssignedToAgent = null; // Reset agent assignment
+            ticket.LastUpdated = DateTime.Now;
+            
+            var assignmentUpdate = new TicketUpdate
+            {
+                Id = ticket.Updates.Count + 1,
+                Author = "System",
+                Content = $"Ticket von Team '{oldTeam}' an Team '{teamName}' übertragen" + 
+                         (reason != null ? $". Grund: {reason}" : ""),
+                Timestamp = DateTime.Now,
+                IsInternalNote = true,
+                Type = TicketUpdateType.TeamAssignment
+            };
+            ticket.Updates.Add(assignmentUpdate);
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task AssignTicketToAgentAsync(int ticketId, string agentId, string? reason = null)
+    {
+        if (_tickets.TryGetValue(ticketId, out var ticket))
+        {
+            var oldAgent = ticket.AssignedToAgent;
+            ticket.AssignedToAgent = agentId;
+            ticket.LastUpdated = DateTime.Now;
+            
+            var assignmentUpdate = new TicketUpdate
+            {
+                Id = ticket.Updates.Count + 1,
+                Author = "System",
+                Content = $"Ticket " + (oldAgent != null ? $"von Agent '{oldAgent}' " : "") + 
+                         $"an Agent '{agentId}' zugewiesen" + 
+                         (reason != null ? $". Grund: {reason}" : ""),
+                Timestamp = DateTime.Now,
+                IsInternalNote = true,
+                Type = TicketUpdateType.AgentAssignment
+            };
+            ticket.Updates.Add(assignmentUpdate);
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task SetTicketPriorityAsync(int ticketId, TicketPriority priority, string? reason = null)
+    {
+        if (_tickets.TryGetValue(ticketId, out var ticket))
+        {
+            var oldPriority = ticket.Priority;
+            ticket.Priority = priority;
+            ticket.LastUpdated = DateTime.Now;
+            
+            var priorityUpdate = new TicketUpdate
+            {
+                Id = ticket.Updates.Count + 1,
+                Author = "System",
+                Content = $"Priorität von {oldPriority} auf {priority} geändert" + 
+                         (reason != null ? $". Grund: {reason}" : ""),
+                Timestamp = DateTime.Now,
+                IsInternalNote = true,
+                Type = TicketUpdateType.InternalNote
+            };
+            ticket.Updates.Add(priorityUpdate);
         }
         return Task.CompletedTask;
     }
@@ -79,10 +210,12 @@ public class TicketService
         {
             var internalUpdate = new TicketUpdate
             {
+                Id = ticket.Updates.Count + 1,
                 Author = "Test Support",
                 Content = "Dies ist eine TEST INTERNE NOTIZ. Sollte nur für das Support-Team sichtbar sein und in LILA angezeigt werden.",
                 Timestamp = DateTime.Now,
-                IsInternalNote = true
+                IsInternalNote = true,
+                Type = TicketUpdateType.InternalNote
             };
             
             ticket.Updates.Add(internalUpdate);
@@ -109,9 +242,18 @@ public class TicketService
             Subject = subject,
             Status = status,
             CreatedAt = DateTime.Now,
+            LastUpdated = DateTime.Now,
+            AssignedToTeam = "1st-Level",
             OrderId = ExtractOrderId(subject + " " + body)
         };
-        ticket.Updates.Add(new TicketUpdate { Author = from, Content = body, Timestamp = DateTime.Now });
+        ticket.Updates.Add(new TicketUpdate 
+        { 
+            Id = 1,
+            Author = from, 
+            Content = body, 
+            Timestamp = DateTime.Now,
+            Type = TicketUpdateType.Reply
+        });
         _tickets.TryAdd(id, ticket);
     }
 
@@ -125,9 +267,18 @@ public class TicketService
             Subject = subject,
             Status = status,
             CreatedAt = createdAt,
+            LastUpdated = createdAt,
+            AssignedToTeam = "1st-Level",
             OrderId = ExtractOrderId(subject + " " + body)
         };
-        ticket.Updates.Add(new TicketUpdate { Author = from, Content = body, Timestamp = createdAt });
+        ticket.Updates.Add(new TicketUpdate 
+        { 
+            Id = 1,
+            Author = from, 
+            Content = body, 
+            Timestamp = createdAt,
+            Type = TicketUpdateType.Reply
+        });
         _tickets.TryAdd(id, ticket);
     }
 

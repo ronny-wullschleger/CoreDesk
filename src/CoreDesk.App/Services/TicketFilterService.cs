@@ -14,6 +14,8 @@ public class TicketFilterService
     public List<Ticket> ApplyFilters(
         List<Ticket> tickets, 
         string searchTerm, 
+        string teamFilter,
+        TicketPriority? priorityFilter,
         TicketStatus? statusFilter, 
         string customerTypeFilter, 
         string dateRangeFilter)
@@ -30,6 +32,21 @@ public class TicketFilterService
                 {
                     return false;
                 }
+            }
+
+            // Team filter
+            if (!string.IsNullOrWhiteSpace(teamFilter))
+            {
+                if (ticket.AssignedToTeam != teamFilter)
+                {
+                    return false;
+                }
+            }
+
+            // Priority filter
+            if (priorityFilter.HasValue && ticket.Priority != priorityFilter.Value)
+            {
+                return false;
             }
 
             // Status filter
@@ -58,12 +75,14 @@ public class TicketFilterService
             }
 
             return true;
-        }).OrderByDescending(t => t.CreatedAt).ToList();
+        }).OrderByDescending(t => t.Priority).ThenByDescending(t => t.CreatedAt).ToList();
     }
 
-    public bool HasActiveFilters(string searchTerm, TicketStatus? statusFilter, string customerTypeFilter, string dateRangeFilter)
+    public bool HasActiveFilters(string searchTerm, string teamFilter, TicketPriority? priorityFilter, TicketStatus? statusFilter, string customerTypeFilter, string dateRangeFilter)
     {
         return !string.IsNullOrWhiteSpace(searchTerm) ||
+               !string.IsNullOrWhiteSpace(teamFilter) ||
+               priorityFilter.HasValue ||
                statusFilter.HasValue ||
                !string.IsNullOrWhiteSpace(customerTypeFilter) ||
                !string.IsNullOrWhiteSpace(dateRangeFilter);
