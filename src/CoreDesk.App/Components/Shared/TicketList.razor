@@ -1,0 +1,34 @@
+@using CoreDesk.App.Models
+
+<div class="list-group list-group-flush">
+    @foreach (var ticket in Tickets)
+    {
+        <a @onclick="() => OnTicketSelected.InvokeAsync(ticket.Id)" 
+           class="list-group-item list-group-item-action @(SelectedTicketId == ticket.Id ? "active" : "")" 
+           style="cursor:pointer">
+            <div class="d-flex w-100 justify-content-between">
+                <h6 class="mb-1">@ticket.Subject</h6>
+                <span class="badge @GetStatusBadgeClass(ticket.Status)">@ticket.Status</span>
+            </div>
+            <p class="mb-1">@ticket.CustomerEmail</p>
+            <small>@ticket.CreatedAt.ToString("g")</small>
+        </a>
+    }
+</div>
+
+@code {
+    [Parameter] public List<Ticket> Tickets { get; set; } = new();
+    [Parameter] public int? SelectedTicketId { get; set; }
+    [Parameter] public EventCallback<int> OnTicketSelected { get; set; }
+
+    private static string GetStatusBadgeClass(TicketStatus status)
+    {
+        return status switch
+        {
+            TicketStatus.Offen => "bg-danger",
+            TicketStatus.InBearbeitung => "bg-warning text-dark",
+            TicketStatus.Gelöst => "bg-success",
+            _ => "bg-secondary"
+        };
+    }
+}

@@ -1,0 +1,99 @@
+@using CoreDesk.App.Models
+
+<div class="p-3 sticky-top bg-light border-bottom">
+    <h4 class="mb-3">Tickets (@FilteredTicketsCount)</h4>
+    
+    <!-- Search Filter -->
+    <div class="mb-2">
+        <input @bind="SearchTerm" @bind:event="oninput" @onkeyup="OnFiltersChanged" 
+               class="form-control form-control-sm" 
+               placeholder="Suche nach Betreff, E-Mail oder Bestell-Nr..." />
+    </div>
+    
+    <!-- Status Filter -->
+    <div class="mb-2">
+        <select @onchange="OnStatusFilterChange" class="form-select form-select-sm">
+            <option value="">Alle Status</option>
+            @foreach (var status in Enum.GetValues<TicketStatus>())
+            {
+                <option value="@status" selected="@(SelectedStatusFilter == status)">@status</option>
+            }
+        </select>
+    </div>
+    
+    <!-- Customer Type Filter -->
+    <div class="mb-2">
+        <select @onchange="OnCustomerTypeFilterChange" class="form-select form-select-sm">
+            <option value="">Alle Kundentypen</option>
+            <option value="Privat" selected="@(SelectedCustomerTypeFilter == "Privat")">Privat</option>
+            <option value="Business" selected="@(SelectedCustomerTypeFilter == "Business")">Business</option>
+        </select>
+    </div>
+    
+    <!-- Date Range Filter -->
+    <div class="mb-2">
+        <select @onchange="OnDateRangeFilterChange" class="form-select form-select-sm">
+            <option value="">Alle Zeiträume</option>
+            <option value="today" selected="@(SelectedDateRangeFilter == "today")">Heute</option>
+            <option value="week" selected="@(SelectedDateRangeFilter == "week")">Diese Woche</option>
+            <option value="month" selected="@(SelectedDateRangeFilter == "month")">Dieser Monat</option>
+        </select>
+    </div>
+    
+    <!-- Clear Filters Button -->
+    @if (HasActiveFilters)
+    {
+        <button @onclick="OnClearFilters" class="btn btn-outline-secondary btn-sm w-100">
+            Filter zurücksetzen
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter] public string SearchTerm { get; set; } = "";
+    [Parameter] public EventCallback<string> SearchTermChanged { get; set; }
+    
+    [Parameter] public TicketStatus? SelectedStatusFilter { get; set; }
+    [Parameter] public EventCallback<TicketStatus?> SelectedStatusFilterChanged { get; set; }
+    
+    [Parameter] public string SelectedCustomerTypeFilter { get; set; } = "";
+    [Parameter] public EventCallback<string> SelectedCustomerTypeFilterChanged { get; set; }
+    
+    [Parameter] public string SelectedDateRangeFilter { get; set; } = "";
+    [Parameter] public EventCallback<string> SelectedDateRangeFilterChanged { get; set; }
+    
+    [Parameter] public int FilteredTicketsCount { get; set; }
+    [Parameter] public bool HasActiveFilters { get; set; }
+    
+    [Parameter] public EventCallback OnFiltersChanged { get; set; }
+    [Parameter] public EventCallback OnClearFilters { get; set; }
+
+    private async Task OnStatusFilterChange(ChangeEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(e.Value?.ToString()))
+        {
+            SelectedStatusFilter = null;
+        }
+        else if (Enum.TryParse<TicketStatus>(e.Value.ToString(), out var status))
+        {
+            SelectedStatusFilter = status;
+        }
+        
+        await SelectedStatusFilterChanged.InvokeAsync(SelectedStatusFilter);
+        await OnFiltersChanged.InvokeAsync();
+    }
+
+    private async Task OnCustomerTypeFilterChange(ChangeEventArgs e)
+    {
+        SelectedCustomerTypeFilter = e.Value?.ToString() ?? "";
+        await SelectedCustomerTypeFilterChanged.InvokeAsync(SelectedCustomerTypeFilter);
+        await OnFiltersChanged.InvokeAsync();
+    }
+
+    private async Task OnDateRangeFilterChange(ChangeEventArgs e)
+    {
+        SelectedDateRangeFilter = e.Value?.ToString() ?? "";
+        await SelectedDateRangeFilterChanged.InvokeAsync(SelectedDateRangeFilter);
+        await OnFiltersChanged.InvokeAsync();
+    }
+}
