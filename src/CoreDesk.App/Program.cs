@@ -12,6 +12,7 @@ builder.Services.AddRazorComponents()
 // Singleton, damit die Daten während der Laufzeit im Speicher bleiben
 builder.Services.AddSingleton<TicketService>(); 
 builder.Services.AddSingleton<MockErpService>();
+builder.Services.AddSingleton<TicketFilterService>();
 
 var app = builder.Build();
 

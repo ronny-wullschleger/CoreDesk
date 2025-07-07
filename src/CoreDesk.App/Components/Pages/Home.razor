@@ -1,8 +1,10 @@
 ﻿@page "/"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using CoreDesk.App.Models
 @using CoreDesk.App.Services
 @inject TicketService TicketRepo
 @inject MockErpService ErpService
+@inject TicketFilterService FilterService
 
 <PageTitle>CoreDesk MVP</PageTitle>
 
@@ -10,44 +12,63 @@
     <div class="row">
         
         <div class="col-4 vh-100 overflow-auto border-end">
-            <h4 class="p-3 sticky-top bg-light">Tickets (@tickets.Count)</h4>
-            <div class="list-group list-group-flush">
-                @foreach (var ticket in tickets)
-                {
-                    <a @onclick="() => SelectTicket(ticket.Id)" 
-                       class="list-group-item list-group-item-action @(selectedTicket?.Id == ticket.Id ? "active" : "")" 
-                       style="cursor:pointer">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1">@ticket.Subject</h6>
-                            <small>@ticket.Status</small>
-                        </div>
-                        <p class="mb-1">@ticket.CustomerEmail</p>
-                        <small>@ticket.CreatedAt.ToString("g")</small>
-                    </a>
-                }
-            </div>
+            <TicketFilters SearchTerm="@searchTerm"
+                          SearchTermChanged="@OnSearchTermChanged"
+                          SelectedStatusFilter="@selectedStatusFilter"
+                          SelectedStatusFilterChanged="@OnStatusFilterChanged"
+                          SelectedCustomerTypeFilter="@selectedCustomerTypeFilter"
+                          SelectedCustomerTypeFilterChanged="@OnCustomerTypeFilterChanged"
+                          SelectedDateRangeFilter="@selectedDateRangeFilter"
+                          SelectedDateRangeFilterChanged="@OnDateRangeFilterChanged"
+                          FilteredTicketsCount="@filteredTickets.Count"
+                          HasActiveFilters="@HasActiveFilters()"
+                          OnFiltersChanged="@ApplyFilters"
+                          OnClearFilters="@ClearFilters" />
+            
+            <TicketList Tickets="@filteredTickets"
+                       SelectedTicketId="@selectedTicket?.Id"
+                       OnTicketSelected="@SelectTicket" />
         </div>
 
         <div class="col-8 vh-100 overflow-auto">
             @if (selectedTicket is not null)
             {
                 <div class="p-3 sticky-top bg-light border-bottom">
-                     <h5>Ticket #@selectedTicket.Id: @selectedTicket.Subject</h5>
-                     <p class="mb-0">
-                         <strong>Kunde:</strong> @customerInfo.CustomerName (@customerInfo.CustomerType)
-                         @if(!string.IsNullOrEmpty(selectedTicket.OrderId))
-                         {
-                            <span class="ms-3 badge bg-secondary">Bestell-Nr: @selectedTicket.OrderId</span>
-                         }
-                     </p>
+                     <div class="d-flex justify-content-between align-items-start">
+                         <div>
+                             <h5>Ticket #@selectedTicket.Id: @selectedTicket.Subject</h5>
+                             <p class="mb-2">
+                                 <strong>Kunde:</strong> @customerInfo.CustomerName (@customerInfo.CustomerType)
+                                 @if(!string.IsNullOrEmpty(selectedTicket.OrderId))
+                                 {
+                                    <span class="ms-3 badge bg-secondary">Bestell-Nr: @selectedTicket.OrderId</span>
+                                 }
+                             </p>
+                         </div>
+                         <div class="d-flex align-items-center">
+                             <span class="me-2"><strong>Status:</strong></span>
+                             <select @onchange="OnStatusChange" class="form-select form-select-sm" style="width: auto;">
+                                 @foreach (var status in Enum.GetValues<TicketStatus>())
+                                 {
+                                     <option value="@((int)status)" selected="@(selectedTicket.Status == status)">@status</option>
+                                 }
+                             </select>
+                         </div>
+                     </div>
                 </div>
 
                 <div class="p-3">
                     @foreach (var update in selectedTicket.Updates.OrderBy(u => u.Timestamp))
                     {
-                        <div class="card mb-3 @(update.IsInternalNote ? "bg-light-yellow" : "")">
-                            <div class="card-header d-flex justify-content-between">
-                                <strong>@update.Author</strong>
+                        <div class="card mb-3 @(update.IsInternalNote ? "bg-light-yellow border-warning" : "")">
+                            <div class="card-header d-flex justify-content-between @(update.IsInternalNote ? "bg-warning-subtle" : "")">
+                                <strong>
+                                    @if (update.IsInternalNote)
+                                    {
+                                        <i class="bi bi-gear-fill me-1"></i>
+                                    }
+                                    @update.Author
+                                </strong>
                                 <small>@update.Timestamp.ToString("g")</small>
                             </div>
                             <div class="card-body">
@@ -76,18 +97,34 @@
 </div>
 
 <style>
-    .bg-light-yellow { background-color: #fffacd; }
+    .bg-light-yellow { 
+        background-color: #fffacd; 
+    }
+    .bg-warning-subtle { 
+        background-color: #fff3cd; 
+    }
+    .border-warning { 
+        border-color: #ffc107 !important; 
+    }
 </style>
 
 @code {
     private List<Ticket> tickets = new();
+    private List<Ticket> filteredTickets = new();
     private Ticket? selectedTicket;
     private (string CustomerName, string CustomerType) customerInfo;
     private string newReplyContent = "";
+    
+    // Filter variables
+    private string searchTerm = "";
+    private TicketStatus? selectedStatusFilter;
+    private string selectedCustomerTypeFilter = "";
+    private string selectedDateRangeFilter = "";
 
     protected override async Task OnInitializedAsync()
     {
         tickets = await TicketRepo.GetAllTicketsAsync();
+        await ApplyFilters();
     }
 
     private async Task SelectTicket(int ticketId)
@@ -117,7 +154,81 @@
 
         await TicketRepo.AddTicketUpdateAsync(selectedTicket.Id, update);
         
-        // Refresh ticket details
-        await SelectTicket(selectedTicket.Id); 
+        // Clear the reply content and refresh
+        newReplyContent = "";
+        await SelectTicket(selectedTicket.Id);
+    }
+
+    private async Task OnStatusChange(ChangeEventArgs e)
+    {
+        if (selectedTicket is null || e.Value is null)
+        {
+            return;
+        }
+
+        if (Enum.TryParse<TicketStatus>(e.Value.ToString(), out var newStatus))
+        {
+            await TicketRepo.UpdateTicketStatusAsync(selectedTicket.Id, newStatus);
+            
+            // Refresh ticket details to show the status change update
+            await SelectTicket(selectedTicket.Id);
+            
+            // Update the tickets list to reflect the new status
+            tickets = await TicketRepo.GetAllTicketsAsync();
+            await ApplyFilters();
+        }
+    }
+
+    // Filter event handlers
+    private async Task OnSearchTermChanged(string value)
+    {
+        searchTerm = value;
+        await ApplyFilters();
+    }
+
+    private async Task OnStatusFilterChanged(TicketStatus? value)
+    {
+        selectedStatusFilter = value;
+        await ApplyFilters();
+    }
+
+    private async Task OnCustomerTypeFilterChanged(string value)
+    {
+        selectedCustomerTypeFilter = value;
+        await ApplyFilters();
+    }
+
+    private async Task OnDateRangeFilterChanged(string value)
+    {
+        selectedDateRangeFilter = value;
+        await ApplyFilters();
+    }
+
+    // Filter methods
+    private async Task ApplyFilters()
+    {
+        filteredTickets = FilterService.ApplyFilters(
+            tickets, 
+            searchTerm, 
+            selectedStatusFilter, 
+            selectedCustomerTypeFilter, 
+            selectedDateRangeFilter);
+        
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+
+    private async Task ClearFilters()
+    {
+        searchTerm = "";
+        selectedStatusFilter = null;
+        selectedCustomerTypeFilter = "";
+        selectedDateRangeFilter = "";
+        await ApplyFilters();
+    }
+
+    private bool HasActiveFilters()
+    {
+        return FilterService.HasActiveFilters(searchTerm, selectedStatusFilter, selectedCustomerTypeFilter, selectedDateRangeFilter);
     }
 }
