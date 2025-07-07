@@ -5,7 +5,7 @@
     
     <!-- Search Filter -->
     <div class="mb-2">
-        <input @bind="SearchTerm" @bind:event="oninput" @onkeyup="OnFiltersChanged" 
+        <input value="@SearchTerm" @oninput="OnSearchTermChange"
                class="form-control form-control-sm" 
                placeholder="Suche nach Betreff, E-Mail oder Bestell-Nr..." />
     </div>
@@ -67,6 +67,12 @@
     
     [Parameter] public EventCallback OnFiltersChanged { get; set; }
     [Parameter] public EventCallback OnClearFilters { get; set; }
+
+    private async Task OnSearchTermChange(ChangeEventArgs e)
+    {
+        var newValue = e.Value?.ToString() ?? "";
+        await SearchTermChanged.InvokeAsync(newValue);
+    }
 
     private async Task OnStatusFilterChange(ChangeEventArgs e)
     {

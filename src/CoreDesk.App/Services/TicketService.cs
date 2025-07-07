@@ -22,8 +22,8 @@ public class TicketService
         CreateNewTicket("peter.mueller@home.de", "Rückgabe möglich?", "Kann ich diesen Artikel zurückgeben?", TicketStatus.Gelöst);
         
         // Ältere Tickets für Datums-Filter
-        CreateOlderTicket("support@acme.inc", "Wartungsvertrag verlängern", "Unser Wartungsvertrag läuft bald ab.", TicketStatus.Offen, DateTime.Now.AddDays(-7));
-        CreateOlderTicket("anna.meier@privat.com", "Alte Anfrage 400-11111", "Eine ältere Anfrage.", TicketStatus.Gelöst, DateTime.Now.AddDays(-30));
+        CreateOlderTicket("support@acme.inc", "Wartungsvertrag verlängern", "Unser Wartungsvertrag läuft bald ab.", TicketStatus.Offen, DateTime.Now.AddDays(-14));
+        CreateOlderTicket("anna.meier@privat.com", "Alte Anfrage 400-11111", "Eine ältere Anfrage.", TicketStatus.Gelöst, DateTime.Now.AddDays(-60));
     }
     
     public Task<List<Ticket>> GetAllTicketsAsync()

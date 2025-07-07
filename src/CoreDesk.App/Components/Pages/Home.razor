@@ -2,6 +2,7 @@
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using CoreDesk.App.Models
 @using CoreDesk.App.Services
+@using CoreDesk.App.Components
 @inject TicketService TicketRepo
 @inject MockErpService ErpService
 @inject TicketFilterService FilterService
@@ -179,33 +180,39 @@
         }
     }
 
-    // Filter event handlers
-    private async Task OnSearchTermChanged(string value)
+    // Filter event handlers - Made synchronous to fix input clearing issue
+    private void OnSearchTermChanged(string value)
     {
         searchTerm = value;
-        await ApplyFilters();
+        ApplyFiltersSync();
     }
 
-    private async Task OnStatusFilterChanged(TicketStatus? value)
+    private void OnStatusFilterChanged(TicketStatus? value)
     {
         selectedStatusFilter = value;
-        await ApplyFilters();
+        ApplyFiltersSync();
     }
 
-    private async Task OnCustomerTypeFilterChanged(string value)
+    private void OnCustomerTypeFilterChanged(string value)
     {
         selectedCustomerTypeFilter = value;
-        await ApplyFilters();
+        ApplyFiltersSync();
     }
 
-    private async Task OnDateRangeFilterChanged(string value)
+    private void OnDateRangeFilterChanged(string value)
     {
         selectedDateRangeFilter = value;
-        await ApplyFilters();
+        ApplyFiltersSync();
     }
 
     // Filter methods
     private async Task ApplyFilters()
+    {
+        ApplyFiltersSync();
+        await Task.CompletedTask;
+    }
+
+    private void ApplyFiltersSync()
     {
         filteredTickets = FilterService.ApplyFilters(
             tickets, 
@@ -215,16 +222,15 @@
             selectedDateRangeFilter);
         
         StateHasChanged();
-        await Task.CompletedTask;
     }
 
-    private async Task ClearFilters()
+    private void ClearFilters()
     {
         searchTerm = "";
         selectedStatusFilter = null;
         selectedCustomerTypeFilter = "";
         selectedDateRangeFilter = "";
-        await ApplyFilters();
+        ApplyFiltersSync();
     }
 
     private bool HasActiveFilters()

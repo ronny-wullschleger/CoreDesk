@@ -102,7 +102,7 @@ else
         StateHasChanged();
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override void OnAfterRender(bool firstRender)
     {
         if (textareaValue != NewReplyContent)
         {
